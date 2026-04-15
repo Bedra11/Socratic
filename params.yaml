@@ -1,0 +1,13 @@
+preprocess:
+  input : data/raw/diabetes.csv # for this to work you need to pull from dvc first or bring the file manually.
+  output : s3://mlops-bucket-210226/data/processed/data.csv
+
+train : 
+  data : s3://mlops-bucket-210226/data/processed/data.csv
+  model_path : models.pkl
+  random_state : 42
+  n_estimators: 100
+  max_depth: 5
+
+aws :
+  region_name: eu-west-3

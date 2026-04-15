@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pandas
+scikit-learn
+mlflow
+boto3
+s3fs
+pyyaml
+python-dotenv
