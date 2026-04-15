@@ -1,0 +1,12 @@
+md5: bb4ad5a6288f50a65165bb0a217d94e4
+frozen: true
+deps:
+- etag: 058f687cc7b2ca39fc616a1c7f93fa10
+  size: 768136
+  hash: md5
+  path: s3://group4-soc-bucket/data/raw/fallacy_dataset.csv
+outs:
+- md5: 058f687cc7b2ca39fc616a1c7f93fa10
+  size: 768136
+  hash: md5
+  path: fallacy_dataset.csv
