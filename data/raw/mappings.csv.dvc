@@ -1,0 +1,12 @@
+md5: 5f204b9df5f8d29be349fa34997d556e
+frozen: true
+deps:
+- etag: fb323822c20df4d8333a66272fb5878a
+  size: 5034
+  hash: md5
+  path: s3://group4-soc-bucket/data/raw/mappings.csv
+outs:
+- md5: fb323822c20df4d8333a66272fb5878a
+  size: 5034
+  hash: md5
+  path: mappings.csv
