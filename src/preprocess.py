@@ -6,9 +6,9 @@ import os
 import yaml
 from io import StringIO
 
-# ─────────────────────────────────────────
+
 # CONFIG
-# ─────────────────────────────────────────
+
 BUCKET = "group4-soc-bucket"
 FILES = {
     "ethics":   "data/raw/ethics_dataset.csv",
@@ -30,9 +30,9 @@ def read_s3_csv(bucket, key):
     print(f"   {len(df)} rows loaded")
     return df
 
-# ─────────────────────────────────────────
-# STEP 1 — LOAD ALL 3 FILES FROM S3
-# ─────────────────────────────────────────
+
+# LOAD ALL 3 FILES FROM S3
+
 df_ethics   = read_s3_csv(BUCKET, FILES["ethics"])
 df_fallacy  = read_s3_csv(BUCKET, FILES["fallacy"])
 df_mappings = read_s3_csv(BUCKET, FILES["mappings"])
@@ -40,3 +40,25 @@ df_mappings = read_s3_csv(BUCKET, FILES["mappings"])
 print("\n Ethics columns:", df_ethics.columns.tolist())
 print(" Fallacy columns:", df_fallacy.columns.tolist())
 print(" Mappings columns:", df_mappings.columns.tolist())
+
+
+
+# ETHICS PIPELINE
+
+# BUILD ETHICS TEXT COLUMN
+# combines scenario + decision + reason
+# into one single text input for the model
+
+print("\n\n Processing ETHICS dataset...")
+
+df_eth = df_ethics.copy()
+
+df_eth["text"] = (
+    df_eth["scenario"].astype(str) + " " +
+    df_eth["decision"].astype(str) + " " +
+    df_eth["reason"].astype(str)
+)
+df_eth["label"] = df_eth["ethics_label"].astype(str)
+df_eth = df_eth[["text", "label"]]
+
+print(f" Ethics label distribution:\n{df_eth['label'].value_counts()}")
