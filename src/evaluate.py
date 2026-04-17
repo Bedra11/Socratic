@@ -83,3 +83,51 @@ fallacy_metrics = evaluate_model(
     model_path      = fal_p["model_path"],
     encoder_path    = "data/processed/fallacy_label_encoder.pkl"
 )
+
+
+# LOG TO MLFLOW — Ethics
+
+mlflow.set_experiment("ethics-reasoning-classifier")
+with mlflow.start_run(run_name="evaluation"):
+    for metric_name, value in ethics_metrics.items():
+        mlflow.log_metric(f"test_{metric_name}", value)
+    print(" Ethics metrics logged to MLflow")
+
+# LOG TO MLFLOW — Fallacy
+
+mlflow.set_experiment("fallacy-detector")
+with mlflow.start_run(run_name="evaluation"):
+    for metric_name, value in fallacy_metrics.items():
+        mlflow.log_metric(f"test_{metric_name}", value)
+    print(" Fallacy metrics logged to MLflow")
+
+# SAVE METRICS TO JSON — for DVC tracking
+
+all_metrics = {
+    "ethics":  ethics_metrics,
+    "fallacy": fallacy_metrics
+}
+
+metrics_path = eval_p["metrics_output"]
+with open(metrics_path, "w") as f:
+    json.dump(all_metrics, f, indent=2)
+
+print(f"\n Metrics saved → {metrics_path}")
+
+
+# THRESHOLD CHECK — for register stage
+
+threshold = eval_p["threshold"]
+
+print(f"\n{'═'*50}")
+print(f"THRESHOLD CHECK (min F1 = {threshold})")
+print(f"{'═'*50}")
+
+for name, metrics in all_metrics.items():
+    f1     = metrics["f1_weighted"]
+    status = " PASS" if f1 >= threshold else " FAIL"
+    print(f"   {name.upper():10} → F1={f1:.4f}  {status}")
+
+print(f"\n Evaluation complete!")
+print(f"   Check results -> {metrics_path}")
+print(f"   MLflow UI     -> {MLFLOW_URI}")
