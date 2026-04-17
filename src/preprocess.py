@@ -105,3 +105,23 @@ pickle.dump(le_eth, open(pre["ethics_encoder"], "wb"))
 print(f" Saved -> {pre['ethics_train']}   ({len(eth_train)} rows)")
 print(f" Saved -> {pre['ethics_test']}    ({len(eth_test)} rows)")
 print(f" Saved -> {pre['ethics_encoder']}")
+
+
+
+# FALLACY PIPELINE
+
+
+#  EXTRACT FALLACY COLUMNS
+# only keep source_article + updated_label
+# drop: original_url, old_label,
+#        explanations, rationale
+
+print("\n\n Processing FALLACY dataset...")
+
+df_fal = df_fallacy[["source_article", "updated_label"]].copy()
+df_fal = df_fal.rename(columns={
+    "source_article": "text",
+    "updated_label":  "label"
+})
+
+print(f"Fallacy label distribution:\n{df_fal['label'].value_counts()}")
