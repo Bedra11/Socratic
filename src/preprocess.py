@@ -125,3 +125,16 @@ df_fal = df_fal.rename(columns={
 })
 
 print(f"Fallacy label distribution:\n{df_fal['label'].value_counts()}")
+
+#  CLEAN FALLACY
+# known issues: extra quotes, miscellaneous
+
+df_fal = df_fal.dropna(subset=["text", "label"])
+df_fal["text"]  = df_fal["text"].str.lower().str.strip().str.strip('"')
+df_fal["label"] = df_fal["label"].str.lower().str.strip()
+df_fal = df_fal[df_fal["text"].str.len() > pre["min_text_length"]]
+df_fal = df_fal.drop_duplicates(subset=["text"])
+df_fal = df_fal[df_fal["label"] != "miscellaneous"]
+
+print(f" Fallacy after cleaning: {len(df_fal)} rows")
+print(f"Final fallacy labels:\n{df_fal['label'].value_counts()}")
