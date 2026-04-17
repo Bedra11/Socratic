@@ -114,3 +114,39 @@ def train_model(
         print(f" Model logged to MLflow: {experiment_name}")
 
     return pipeline
+
+
+
+# MODEL 1 — ETHICS CLASSIFIER
+# Task    : classify ethical framework
+# Labels  : utilitarianism, deontology,
+#           virtue ethics, care ethics, egoism
+
+ethics_model = train_model(
+    experiment_name = "ethics-reasoning-classifier",
+    train_path      = eth_params["train_data"],
+    model_path      = eth_params["model_path"],
+    p               = eth_params,
+    class_weight    = None   # ethics dataset is balanced
+)
+
+
+# MODEL 2 — FALLACY DETECTOR
+# Task    : detect logical fallacy type
+# Labels  : 13 classes (imbalanced)
+#           faulty generalization = 435
+#           equivocation          = 46
+
+
+fallacy_model = train_model(
+    experiment_name = "fallacy-detector",
+    train_path      = fal_params["train_data"],
+    model_path      = fal_params["model_path"],
+    p               = fal_params,
+    class_weight    = fal_params["class_weight"]  # "balanced"
+)
+
+print("\n\n Both models trained successfully!")
+print(f"   Ethics  model → {eth_params['model_path']}")
+print(f"   Fallacy model → {fal_params['model_path']}")
+print(f"   MLflow UI     → {MLFLOW_URI}")
