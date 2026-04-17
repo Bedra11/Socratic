@@ -105,3 +105,65 @@ pickle.dump(le_eth, open(pre["ethics_encoder"], "wb"))
 print(f" Saved -> {pre['ethics_train']}   ({len(eth_train)} rows)")
 print(f" Saved -> {pre['ethics_test']}    ({len(eth_test)} rows)")
 print(f" Saved -> {pre['ethics_encoder']}")
+
+
+
+# FALLACY PIPELINE
+
+
+#  EXTRACT FALLACY COLUMNS
+# only keep source_article + updated_label
+# drop: original_url, old_label,
+#        explanations, rationale
+
+print("\n\n Processing FALLACY dataset...")
+
+df_fal = df_fallacy[["source_article", "updated_label"]].copy()
+df_fal = df_fal.rename(columns={
+    "source_article": "text",
+    "updated_label":  "label"
+})
+
+print(f"Fallacy label distribution:\n{df_fal['label'].value_counts()}")
+
+#  CLEAN FALLACY
+# known issues: extra quotes, miscellaneous
+
+df_fal = df_fal.dropna(subset=["text", "label"])
+df_fal["text"]  = df_fal["text"].str.lower().str.strip().str.strip('"')
+df_fal["label"] = df_fal["label"].str.lower().str.strip()
+df_fal = df_fal[df_fal["text"].str.len() > pre["min_text_length"]]
+df_fal = df_fal.drop_duplicates(subset=["text"])
+df_fal = df_fal[df_fal["label"] != "miscellaneous"]
+
+print(f" Fallacy after cleaning: {len(df_fal)} rows")
+print(f"Final fallacy labels:\n{df_fal['label'].value_counts()}")
+
+# ENCODE + SPLIT + SAVE FALLACY
+
+le_fal = LabelEncoder()
+df_fal["label_encoded"] = le_fal.fit_transform(df_fal["label"])
+
+print("\n  Fallacy label mapping:")
+for i, cls in enumerate(le_fal.classes_):
+    print(f"   {i} → {cls}")
+
+fal_train, fal_test = train_test_split(
+    df_fal,
+    test_size=pre["test_size"],
+    random_state=pre["random_state"],
+    stratify=df_fal["label_encoded"]
+)
+
+fal_train.to_csv(pre["fallacy_train"],   index=False)
+fal_test.to_csv(pre["fallacy_test"],     index=False)
+pickle.dump(le_fal, open(pre["fallacy_encoder"], "wb"))
+
+print(f" Saved -> {pre['fallacy_train']}   ({len(fal_train)} rows)")
+print(f" Saved -> {pre['fallacy_test']}    ({len(fal_test)} rows)")
+print(f" Saved -> {pre['fallacy_encoder']}")
+
+
+print("\n Both pipelines complete!")
+print(f"  Ethics  -> {len(eth_train)} train | {len(eth_test)} test")
+print(f"  Fallacy -> {len(fal_train)} train | {len(fal_test)} test")
