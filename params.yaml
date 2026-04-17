@@ -19,13 +19,29 @@ preprocess:
   random_state:    42
   min_text_length: 20
 
-train:
-  data:           "data/processed/fallacy_train.csv"
-  model_path:     "models/model.pkl"
-  random_state:   42
-  max_features:   10000
-  C:              1.0
+train_ethics:
+  train_data:    "data/processed/ethics_train.csv"
+  model_path:    "models/ethics_model.pkl"
+  random_state:  42
+  max_features:  15000
+  ngram_min:     1
+  ngram_max:     2
+  C:             1.0
+  solver:        "lbfgs"
+  max_iter:      1000
 
+train_fallacy:
+  train_data:    "data/processed/fallacy_train.csv"
+  model_path:    "models/fallacy_model.pkl"
+  random_state:  42
+  max_features:  20000
+  ngram_min:     1
+  ngram_max:     3
+  C:             5.0
+  solver:        "lbfgs"
+  max_iter:      2000
+  class_weight:  "balanced"
+  
 evaluate:
   test_data:      "data/processed/fallacy_test.csv"
   model_path:     "models/model.pkl"
@@ -39,3 +55,4 @@ register:
 aws:
   bucket:         "group4-soc-bucket"
   region_name:    "eu-west-3"
+
