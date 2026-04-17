@@ -9,18 +9,20 @@ from io import StringIO
 
 # CONFIG
 
-BUCKET = "group4-soc-bucket"
-FILES = {
-    "ethics":   "data/raw/ethics_dataset.csv",
-    "fallacy":  "data/raw/fallacy_dataset.csv",
-    "mappings": "data/raw/mappings.csv"
+params = yaml.safe_load(open("params.yaml"))
+pre    = params["preprocess"]
+aws    = params["aws"]
+
+BUCKET = aws["bucket"]
+FILES  = {
+    "ethics":   pre["ethics_input"],
+    "fallacy":  pre["fallacy_input"],
+    "mappings": pre["mappings_input"]
 }
 PROCESSED_DIR = "data/processed"
-params = yaml.safe_load(open("params.yaml"))["preprocess"]
 
-# ─────────────────────────────────────────
 # HELPER — Read any CSV from S3
-# ─────────────────────────────────────────
+
 def read_s3_csv(bucket, key):
     print(f" Reading s3://{bucket}/{key}")
     s3 = boto3.client("s3")
@@ -62,3 +64,14 @@ df_eth["label"] = df_eth["ethics_label"].astype(str)
 df_eth = df_eth[["text", "label"]]
 
 print(f" Ethics label distribution:\n{df_eth['label'].value_counts()}")
+
+
+#CLEAN ETHICS
+
+df_eth = df_eth.dropna(subset=["text", "label"])
+df_eth["text"]  = df_eth["text"].str.lower().str.strip()
+df_eth["label"] = df_eth["label"].str.lower().str.strip()
+df_eth = df_eth[df_eth["text"].str.len() > pre["min_text_length"]]
+df_eth = df_eth.drop_duplicates(subset=["text"])
+
+print(f" Ethics after cleaning: {len(df_eth)} rows")
