@@ -1,0 +1,78 @@
+schema: '2.0'
+stages:
+  preprocess:
+    cmd: python src/preprocess.py
+    deps:
+    - path: data/raw/ethics_dataset.csv
+      hash: md5
+      md5: b7ecfb9040152854904ac5287773c5c4
+      size: 59358
+    - path: data/raw/fallacy_dataset.csv
+      hash: md5
+      md5: 058f687cc7b2ca39fc616a1c7f93fa10
+      size: 768136
+    - path: data/raw/mappings.csv
+      hash: md5
+      md5: fb323822c20df4d8333a66272fb5878a
+      size: 5034
+    - path: params.yaml
+      hash: md5
+      md5: 172dafc2f33d2ad220e61d9d3abf8d8f
+      size: 1557
+    - path: src/preprocess.py
+      hash: md5
+      md5: 3741bb8df1768963c0931aa4261e702c
+      size: 4898
+    outs:
+    - path: data/processed/ethics_label_encoder.pkl
+      hash: md5
+      md5: 73ef5339a86d7953f1a3f75c3bdfa449
+      size: 312
+    - path: data/processed/ethics_test.csv
+      hash: md5
+      md5: aceb5a163f7a476578445e139cef83b9
+      size: 12148
+    - path: data/processed/ethics_train.csv
+      hash: md5
+      md5: 9a7eca68790966307de0ed7bcd8e6497
+      size: 47833
+    - path: data/processed/fallacy_label_encoder.pkl
+      hash: md5
+      md5: f2bc00f79ecef407c870e0625512c94d
+      size: 487
+    - path: data/processed/fallacy_test.csv
+      hash: md5
+      md5: 4ae7c0d00ed12519c3f4e4590c2bb640
+      size: 73910
+    - path: data/processed/fallacy_train.csv
+      hash: md5
+      md5: 57d00f14fa750cde3a628ccfcffea445
+      size: 312279
+  train:
+    cmd: python src/train.py
+    deps:
+    - path: data/processed/ethics_train.csv
+      hash: md5
+      md5: 9a7eca68790966307de0ed7bcd8e6497
+      size: 47833
+    - path: data/processed/fallacy_train.csv
+      hash: md5
+      md5: 57d00f14fa750cde3a628ccfcffea445
+      size: 312279
+    - path: params.yaml
+      hash: md5
+      md5: 172dafc2f33d2ad220e61d9d3abf8d8f
+      size: 1557
+    - path: src/train.py
+      hash: md5
+      md5: 31f90f7c75498d6d76a0b19263f8984b
+      size: 4577
+    outs:
+    - path: models/ethics_model.pkl
+      hash: md5
+      md5: 9024ebbf72e31f4c55c3b585eeb1e764
+      size: 96399
+    - path: models/fallacy_model.pkl
+      hash: md5
+      md5: e57d7fab45e0429fa004082c867c2f86
+      size: 1869895

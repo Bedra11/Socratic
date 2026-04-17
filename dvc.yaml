@@ -1,0 +1,27 @@
+stages:
+  preprocess:
+    cmd: python src/preprocess.py
+    deps:
+      - src/preprocess.py
+      - data/raw/ethics_dataset.csv
+      - data/raw/fallacy_dataset.csv
+      - data/raw/mappings.csv
+      - params.yaml
+    outs:
+      - data/processed/ethics_train.csv
+      - data/processed/ethics_test.csv
+      - data/processed/fallacy_train.csv
+      - data/processed/fallacy_test.csv
+      - data/processed/ethics_label_encoder.pkl
+      - data/processed/fallacy_label_encoder.pkl
+
+  train:
+    cmd: python src/train.py
+    deps:
+      - src/train.py
+      - data/processed/ethics_train.csv
+      - data/processed/fallacy_train.csv
+      - params.yaml
+    outs:
+      - models/ethics_model.pkl
+      - models/fallacy_model.pkl
