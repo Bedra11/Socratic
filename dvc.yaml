@@ -25,5 +25,15 @@ stages:
     outs:
       - models/ethics_model.pkl
       - models/fallacy_model.pkl
-
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - src/evaluate.py
+      - models/ethics_model.pkl
+      - models/fallacy_model.pkl
+      - data/processed/ethics_test.csv
+      - data/processed/fallacy_test.csv
+      - params.yaml
+    outs:
+      - metrics/metrics.json
   
