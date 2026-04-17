@@ -5,6 +5,9 @@ import boto3
 import os
 import yaml
 from io import StringIO
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+import pickle
 
 
 # CONFIG
@@ -75,3 +78,30 @@ df_eth = df_eth[df_eth["text"].str.len() > pre["min_text_length"]]
 df_eth = df_eth.drop_duplicates(subset=["text"])
 
 print(f" Ethics after cleaning: {len(df_eth)} rows")
+
+
+# ENCODE + SPLIT + SAVE ETHICS
+
+le_eth = LabelEncoder()
+df_eth["label_encoded"] = le_eth.fit_transform(df_eth["label"])
+
+print("\n  Ethics label mapping:")
+for i, cls in enumerate(le_eth.classes_):
+    print(f"   {i} → {cls}")
+
+eth_train, eth_test = train_test_split(
+    df_eth,
+    test_size=pre["test_size"],
+    random_state=pre["random_state"],
+    stratify=df_eth["label_encoded"]
+)
+
+os.makedirs(PROCESSED_DIR, exist_ok=True)
+
+eth_train.to_csv(pre["ethics_train"],   index=False)
+eth_test.to_csv(pre["ethics_test"],     index=False)
+pickle.dump(le_eth, open(pre["ethics_encoder"], "wb"))
+
+print(f" Saved -> {pre['ethics_train']}   ({len(eth_train)} rows)")
+print(f" Saved -> {pre['ethics_test']}    ({len(eth_test)} rows)")
+print(f" Saved -> {pre['ethics_encoder']}")
