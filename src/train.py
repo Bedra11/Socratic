@@ -114,3 +114,18 @@ def train_model(
         print(f" Model logged to MLflow: {experiment_name}")
 
     return pipeline
+
+
+
+# MODEL 1 — ETHICS CLASSIFIER
+# Task    : classify ethical framework
+# Labels  : utilitarianism, deontology,
+#           virtue ethics, care ethics, egoism
+
+ethics_model = train_model(
+    experiment_name = "ethics-reasoning-classifier",
+    train_path      = eth_params["train_data"],
+    model_path      = eth_params["model_path"],
+    p               = eth_params,
+    class_weight    = None   # ethics dataset is balanced
+)
