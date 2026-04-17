@@ -43,10 +43,14 @@ train_fallacy:
   class_weight:  "balanced"
   
 evaluate:
-  test_data:      "data/processed/fallacy_test.csv"
-  model_path:     "models/model.pkl"
-  metrics_output: "metrics/metrics.json"
-  threshold:      0.55
+  ethics_test:     "data/processed/ethics_test.csv"
+  ethics_model:    "models/ethics_model.pkl"
+  ethics_encoder:  "data/processed/ethics_label_encoder.pkl"
+  fallacy_test:    "data/processed/fallacy_test.csv"
+  fallacy_model:   "models/fallacy_model.pkl"
+  fallacy_encoder: "data/processed/fallacy_label_encoder.pkl"
+  metrics_output:  "metrics/metrics.json"
+  threshold:       0.55
 
 register:
   model_name:     "thinkright-fallacy-classifier"
