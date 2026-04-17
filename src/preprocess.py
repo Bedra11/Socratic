@@ -1,1 +1,42 @@
 # preprocess.py
+# src/preprocess.py
+import pandas as pd
+import boto3
+import os
+import yaml
+from io import StringIO
+
+# ─────────────────────────────────────────
+# CONFIG
+# ─────────────────────────────────────────
+BUCKET = "group4-soc-bucket"
+FILES = {
+    "ethics":   "data/raw/ethics_dataset.csv",
+    "fallacy":  "data/raw/fallacy_dataset.csv",
+    "mappings": "data/raw/mappings.csv"
+}
+PROCESSED_DIR = "data/processed"
+params = yaml.safe_load(open("params.yaml"))["preprocess"]
+
+# ─────────────────────────────────────────
+# HELPER — Read any CSV from S3
+# ─────────────────────────────────────────
+def read_s3_csv(bucket, key):
+    print(f" Reading s3://{bucket}/{key}")
+    s3 = boto3.client("s3")
+    obj = s3.get_object(Bucket=bucket, Key=key)
+    content = obj["Body"].read().decode("utf-8")
+    df = pd.read_csv(StringIO(content))
+    print(f"   {len(df)} rows loaded")
+    return df
+
+# ─────────────────────────────────────────
+# STEP 1 — LOAD ALL 3 FILES FROM S3
+# ─────────────────────────────────────────
+df_ethics   = read_s3_csv(BUCKET, FILES["ethics"])
+df_fallacy  = read_s3_csv(BUCKET, FILES["fallacy"])
+df_mappings = read_s3_csv(BUCKET, FILES["mappings"])
+
+print("\n Ethics columns:", df_ethics.columns.tolist())
+print(" Fallacy columns:", df_fallacy.columns.tolist())
+print(" Mappings columns:", df_mappings.columns.tolist())

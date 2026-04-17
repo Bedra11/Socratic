@@ -1,13 +1,36 @@
 preprocess:
-  input : data/raw/diabetes.csv # for this to work you need to pull from dvc first or bring the file manually.
-  output : s3://mlops-bucket-210226/data/processed/data.csv
+  # All 3 raw files read directly from S3
+  ethics_input:   "data/raw/ethics_dataset.csv"
+  fallacy_input:  "data/raw/fallacy_dataset.csv"
+  mappings_input: "data/raw/mappings.csv"
+  
+  # Processed outputs saved locally (DVC versions them)
+  train_output:   "data/processed/train.csv"
+  test_output:    "data/processed/test.csv"
+  encoder_output: "data/processed/label_encoder.pkl"
+  
+  # Cleaning params
+  test_size:      0.2
+  random_state:   42
+  min_text_length: 20
 
-train : 
-  data : s3://mlops-bucket-210226/data/processed/data.csv
-  model_path : models.pkl
-  random_state : 42
-  n_estimators: 100
-  max_depth: 5
+train:
+  data:           "data/processed/train.csv"
+  model_path:     "models/model.pkl"
+  random_state:   42
+  max_features:   10000
+  C:              1.0
 
-aws :
-  region_name: eu-west-3
+evaluate:
+  test_data:      "data/processed/test.csv"
+  model_path:     "models/model.pkl"
+  metrics_output: "metrics/metrics.json"
+  threshold:      0.55
+
+register:
+  model_name:     "thinkright-fallacy-classifier"
+  stage:          "Staging"
+
+aws:
+  bucket:         "group4-soc-bucket"
+  region_name:    "eu-west-3"
