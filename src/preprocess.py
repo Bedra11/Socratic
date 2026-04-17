@@ -138,3 +138,32 @@ df_fal = df_fal[df_fal["label"] != "miscellaneous"]
 
 print(f" Fallacy after cleaning: {len(df_fal)} rows")
 print(f"Final fallacy labels:\n{df_fal['label'].value_counts()}")
+
+# ENCODE + SPLIT + SAVE FALLACY
+
+le_fal = LabelEncoder()
+df_fal["label_encoded"] = le_fal.fit_transform(df_fal["label"])
+
+print("\n  Fallacy label mapping:")
+for i, cls in enumerate(le_fal.classes_):
+    print(f"   {i} → {cls}")
+
+fal_train, fal_test = train_test_split(
+    df_fal,
+    test_size=pre["test_size"],
+    random_state=pre["random_state"],
+    stratify=df_fal["label_encoded"]
+)
+
+fal_train.to_csv(pre["fallacy_train"],   index=False)
+fal_test.to_csv(pre["fallacy_test"],     index=False)
+pickle.dump(le_fal, open(pre["fallacy_encoder"], "wb"))
+
+print(f" Saved -> {pre['fallacy_train']}   ({len(fal_train)} rows)")
+print(f" Saved -> {pre['fallacy_test']}    ({len(fal_test)} rows)")
+print(f" Saved -> {pre['fallacy_encoder']}")
+
+
+print("\n Both pipelines complete!")
+print(f"  Ethics  -> {len(eth_train)} train | {len(eth_test)} test")
+print(f"  Fallacy -> {len(fal_train)} train | {len(fal_test)} test")
