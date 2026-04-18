@@ -1,10 +1,3 @@
-md5: cb2b8363c9909f0ce26137f22288b1cf
-frozen: true
-deps:
-- etag: b7ecfb9040152854904ac5287773c5c4
-  size: 59358
-  hash: md5
-  path: s3://group4-soc-bucket/data/raw/ethics_dataset.csv
 outs:
 - md5: b7ecfb9040152854904ac5287773c5c4
   size: 59358
