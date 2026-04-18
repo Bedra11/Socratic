@@ -7,3 +7,4 @@ boto3
 s3fs
 pyyaml
 python-dotenv
+dvc[s3]
