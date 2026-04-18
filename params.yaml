@@ -53,11 +53,12 @@ evaluate:
   threshold:       0.55
 
 register:
-  ethics_model_name:  "thinkright-ethics-classifier"
-  fallacy_model_name: "thinkright-fallacy-classifier"
-  stage:              "Staging"
+  ethics_model_name:   "socratic-ethics-classifier"
+  fallacy_model_name:  "socratic-fallacy-classifier"
+  ethics_experiment:   "ethics-classifier"
+  fallacy_experiment:  "fallacy-detector-classifier"
+  stage:               "Staging"
 
 aws:
-  bucket:         "group4-soc-bucket"
-  region_name:    "eu-west-3"
-
+  bucket:      "group4-soc-bucket"
+  region_name: "eu-west-3"

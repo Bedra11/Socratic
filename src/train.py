@@ -1,3 +1,4 @@
+# src/train.py
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -6,7 +7,6 @@ import pickle
 import os
 import yaml
 import mlflow
-import mlflow.sklearn
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -18,51 +18,43 @@ from sklearn.metrics import (
 import warnings
 warnings.filterwarnings("ignore")
 
+ 
 # CONFIG
-
-params      = yaml.safe_load(open("params.yaml"))
-eth_params  = params["train_ethics"]
-fal_params  = params["train_fallacy"]
-
-MLFLOW_URI  = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+ 
+params     = yaml.safe_load(open("params.yaml"))
+eth_params = params["train_ethics"]
+fal_params = params["train_fallacy"]
+MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
 
 mlflow.set_tracking_uri(MLFLOW_URI)
-print(f" MLflow tracking: {MLFLOW_URI}")
+print(f"  MLflow tracking: {MLFLOW_URI}")
 
 os.makedirs("models", exist_ok=True)
 
-
-# HELPER — Generic train function
-
-def train_model(
-    experiment_name,
-    train_path,
-    model_path,
-    p,
-    class_weight=None
-):
+ 
+# HELPER
+ 
+def train_model(experiment_name, train_path, model_path, p, class_weight=None):
     print(f"\n{'═'*50}")
-    print(f" Training: {experiment_name}")
+    print(f"  Training: {experiment_name}")
     print(f"{'═'*50}")
 
-    # Load data
     df = pd.read_csv(train_path)
     df = df.dropna(subset=["text", "label"])
     X  = df["text"].astype(str)
     y  = df["label"].astype(str)
 
-    print(f" Training samples : {len(df)}")
-    print(f" Classes          : {sorted(y.unique())}")
+    print(f"  Training samples : {len(df)}")
+    print(f"  Classes          : {sorted(y.unique())}")
 
-    # Build pipeline
     pipeline = Pipeline([
         ("tfidf", TfidfVectorizer(
-            max_features = p["max_features"],
-            ngram_range  = (p["ngram_min"], p["ngram_max"]),
-            sublinear_tf = True,        # log scaling — helps with imbalance
+            max_features  = p["max_features"],
+            ngram_range   = (p["ngram_min"], p["ngram_max"]),
+            sublinear_tf  = True,
             strip_accents = "unicode",
             analyzer      = "word",
-            min_df        = 2           # ignore very rare terms
+            min_df        = 2
         )),
         ("clf", LogisticRegression(
             C            = p["C"],
@@ -74,22 +66,23 @@ def train_model(
         ))
     ])
 
-    # MLflow run
     mlflow.set_experiment(experiment_name)
 
-    with mlflow.start_run():
-        # Log params
+    with mlflow.start_run(run_name="training"):
+        # ─── Log params only ───
         mlflow.log_param("max_features",  p["max_features"])
         mlflow.log_param("ngram_range",   f"{p['ngram_min']},{p['ngram_max']}")
         mlflow.log_param("C",             p["C"])
+        mlflow.log_param("solver",        p["solver"])
+        mlflow.log_param("max_iter",      p["max_iter"])
         mlflow.log_param("class_weight",  str(class_weight))
         mlflow.log_param("train_samples", len(df))
 
-        # Train
+        # ─── Train ───
         pipeline.fit(X, y)
-        print(" Training complete")
+        print("  Training complete")
 
-        # Evaluate on train set 
+        # ─── Log train metrics only ───
         y_pred = pipeline.predict(X)
         f1     = f1_score(y, y_pred, average="weighted")
         acc    = accuracy_score(y, y_pred)
@@ -97,56 +90,37 @@ def train_model(
         mlflow.log_metric("train_f1_weighted", round(f1, 4))
         mlflow.log_metric("train_accuracy",    round(acc, 4))
 
-        print(f"\n Train F1 (weighted): {f1:.4f}")
-        print(f" Train Accuracy     : {acc:.4f}")
+        print(f"\n  Train F1 (weighted): {f1:.4f}")
+        print(f"  Train Accuracy     : {acc:.4f}")
         print(f"\n{classification_report(y, y_pred)}")
 
-        # Save model locally
+        # ─── Save locally ONLY — no MLflow model logging here ───
         pickle.dump(pipeline, open(model_path, "wb"))
-        print(f" Model saved -> {model_path}")
-
-        # Log model artifact to MLflow
-        mlflow.sklearn.log_model(
-            pipeline,
-            artifact_path    = "model",
-            registered_model_name = experiment_name
-        )
-        print(f" Model logged to MLflow: {experiment_name}")
+        print(f"  Model saved locally → {model_path}")
+        print(f"   Model NOT sent to MLflow Registry (register.py will handle this)")
 
     return pipeline
 
 
-
-# MODEL 1 — ETHICS CLASSIFIER
-# Task    : classify ethical framework
-# Labels  : utilitarianism, deontology,
-#           virtue ethics, care ethics, egoism
+# TRAIN BOTH MODELS
 
 ethics_model = train_model(
     experiment_name = "ethics-reasoning-classifier",
     train_path      = eth_params["train_data"],
     model_path      = eth_params["model_path"],
     p               = eth_params,
-    class_weight    = None   # ethics dataset is balanced
+    class_weight    = None
 )
-
-
-# MODEL 2 — FALLACY DETECTOR
-# Task    : detect logical fallacy type
-# Labels  : 13 classes (imbalanced)
-#           faulty generalization = 435
-#           equivocation          = 46
-
 
 fallacy_model = train_model(
     experiment_name = "fallacy-detector",
     train_path      = fal_params["train_data"],
     model_path      = fal_params["model_path"],
     p               = fal_params,
-    class_weight    = fal_params["class_weight"]  # "balanced"
+    class_weight    = fal_params["class_weight"]
 )
 
-print("\n\n Both models trained successfully!")
+print("\n\n  Both models trained and saved locally!")
 print(f"   Ethics  model → {eth_params['model_path']}")
 print(f"   Fallacy model → {fal_params['model_path']}")
-print(f"   MLflow UI     → {MLFLOW_URI}")
+print(f"    Run evaluate.py next")
