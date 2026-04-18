@@ -36,4 +36,14 @@ stages:
       - params.yaml
     outs:
       - metrics/metrics.json
-  
+  register:
+    cmd: python src/register.py
+    deps:
+      - src/register.py
+      - models/ethics_model.pkl
+      - models/fallacy_model.pkl
+      - metrics/metrics.json
+    params:
+      - params.yaml:
+          - register
+          - evaluate

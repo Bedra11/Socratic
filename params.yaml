@@ -41,7 +41,7 @@ train_fallacy:
   solver:        "lbfgs"
   max_iter:      2000
   class_weight:  "balanced"
-  
+
 evaluate:
   ethics_test:     "data/processed/ethics_test.csv"
   ethics_model:    "models/ethics_model.pkl"
@@ -53,8 +53,9 @@ evaluate:
   threshold:       0.55
 
 register:
-  model_name:     "thinkright-fallacy-classifier"
-  stage:          "Staging"
+  ethics_model_name:  "thinkright-ethics-classifier"
+  fallacy_model_name: "thinkright-fallacy-classifier"
+  stage:              "Staging"
 
 aws:
   bucket:         "group4-soc-bucket"
