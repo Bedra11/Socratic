@@ -1,0 +1,51 @@
+name: Retrain Models
+
+on:
+  workflow_dispatch:    
+  schedule:
+    - cron: '0 2 * * 1' 
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Retrain on EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/Socratic
+
+            # pull latest code
+            git pull origin main
+
+            # load env
+            source /home/ubuntu/Socratic/.env
+
+            # run full pipeline
+            dvc pull
+            dvc repro
+            dvc push
+
+            # restart API with new model
+            screen -S api -X quit || true
+            screen -S api -dm bash -c "
+              source /home/ubuntu/Socratic/.env &&
+              cd /home/ubuntu/Socratic &&
+              python -m uvicorn api.main:app \
+                --host 0.0.0.0 \
+                --port 8000
+            "
+            echo "Retrain complete and API restarted"
+
+      - name: Health Check
+        run: |
+          sleep 20
+          curl --fail http://${{ secrets.EC2_HOST }}:8000/ || exit 1
+          echo "API is healthy after retrain"
