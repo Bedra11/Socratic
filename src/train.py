@@ -62,7 +62,6 @@ def train_model(experiment_name, train_path, model_path, p, class_weight=None):
             max_iter     = p["max_iter"],
             random_state = p["random_state"],
             class_weight = class_weight,
-            multi_class  = "multinomial"
         ))
     ])
 
