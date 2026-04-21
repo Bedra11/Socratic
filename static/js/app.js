@@ -1,15 +1,8 @@
-// static/js/app.js
-// ─────────────────────────────────────────
-// SOCRATIC GAME — COMPLETE GAME LOGIC
-// ─────────────────────────────────────────
+
 
 const ROMAN = ["I", "II", "III", "IV", "V"];
 
-// ─────────────────────────────────────────
-// SCENARIOS DATA
-// Each scenario has: text, decisions, reasons
-// reasons are designed to map to fallacy types
-// ─────────────────────────────────────────
+
 const SCENARIOS = [
   {
     text: "A pharmaceutical company discovers that their best-selling drug has rare but serious side effects. Disclosing this will collapse the stock price and thousands of employees will lose their jobs. The CEO considers staying silent.",
@@ -83,9 +76,7 @@ const SCENARIOS = [
   }
 ];
 
-// ─────────────────────────────────────────
-// STATE
-// ─────────────────────────────────────────
+
 let currentScenarioIndex = 0;
 let selectedDecision     = "";
 let selectedReason       = "";
