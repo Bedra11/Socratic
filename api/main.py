@@ -1,180 +1,123 @@
-import logging
+# api/main.py
+from dotenv import load_dotenv
+load_dotenv()
+
+import os
 import pickle
-from pathlib import Path
-from typing import Optional
-
-import numpy as np
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+import mlflow
+import mlflow.sklearn
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+import warnings
+warnings.filterwarnings("ignore")
 
-# ── Logging ──────────────────────────────────────────────────────────────────
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s – %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-log = logging.getLogger("socratic_ai")
 
-# ── App ───────────────────────────────────────────────────────────────────────
-app = FastAPI(
-    title="Socratic AI",
-    description="Fallacy detection and ethical reasoning powered by ML",
-    version="1.0.0",
-)
+# APP INIT
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI(title="Socratic API", version="1.0.0")
 
-# ── Model registry ────────────────────────────────────────────────────────────
-MODELS: dict = {}
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
-MODEL_PATHS = {
-    "fallacy": Path("models/fallacy_model.pkl"),
-    "ethics":  Path("models/ethics_model.pkl"),
+
+# MODEL LOADING — from MLflow Registry
+
+MLFLOW_URI          = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+MODEL_NAME_ETHICS   = os.getenv("MODEL_NAME_ETHICS",  "socratic-ethics-classifier")
+MODEL_NAME_FALLACY  = os.getenv("MODEL_NAME_FALLACY", "socratic-fallacy-classifier")
+
+mlflow.set_tracking_uri(MLFLOW_URI)
+
+def load_model_from_registry(name: str):
+    try:
+        model = mlflow.sklearn.load_model(f"models:/{name}/Staging")
+        print(f" Loaded from MLflow Registry: {name}")
+        return model
+    except Exception as e:
+        print(f"  MLflow Registry failed ({e}), loading from local pickle...")
+        path = f"models/{name.split('-')[1]}_model.pkl"
+        if os.path.exists(path):
+            return pickle.load(open(path, "rb"))
+        raise RuntimeError(f"Cannot load model: {name}")
+
+ethics_model  = load_model_from_registry(MODEL_NAME_ETHICS)
+fallacy_model = load_model_from_registry(MODEL_NAME_FALLACY)
+
+print(" Socratic API ready")
+
+
+# BOOK RECOMMENDATIONS
+
+BOOK_MAP = {
+    "faulty generalization":    {"title": "Thinking, Fast and Slow",         "author": "Daniel Kahneman",   "why": "You jump to broad conclusions — this book reveals why our minds overgeneralize."},
+    "false causality":          {"title": "The Book of Why",                  "author": "Judea Pearl",       "why": "You confuse correlation with cause — Pearl teaches rigorous causal thinking."},
+    "circular reasoning":       {"title": "Gödel, Escher, Bach",              "author": "Douglas Hofstadter","why": "You argue in loops — this book explores self-reference and paradox beautifully."},
+    "ad hominem":               {"title": "How to Win an Argument",           "author": "Arthur Schopenhauer","why": "You attack people, not ideas — Schopenhauer exposes every rhetorical trick."},
+    "ad populum":               {"title": "Extraordinary Popular Delusions",  "author": "Charles Mackay",    "why": "You follow the crowd — Mackay documents how majorities are systematically wrong."},
+    "appeal to emotion":        {"title": "The Righteous Mind",               "author": "Jonathan Haidt",    "why": "You reason with feeling — Haidt explains why emotions drive moral judgment."},
+    "false dilemma":            {"title": "Justice",                          "author": "Michael Sandel",    "why": "You see only two options — Sandel reveals the rich complexity of moral choices."},
+    "fallacy of relevance":     {"title": "Critical Thinking",                "author": "Richard Paul",      "why": "You use red herrings — this book trains attention to what actually matters."},
+    "fallacy of logic":         {"title": "An Introduction to Logic",         "author": "Irving Copi",       "why": "Your logical structure breaks down — Copi rebuilds it from the ground up."},
+    "intentional":              {"title": "Influence",                        "author": "Robert Cialdini",   "why": "You manipulate rather than argue — Cialdini exposes every persuasion trick."},
+    "fallacy of extension":     {"title": "The Straw Man Fallacy",            "author": "Scott Aikin",       "why": "You attack exaggerated versions of ideas — this book dissects exactly that."},
+    "fallacy of credibility":   {"title": "The Demon-Haunted World",          "author": "Carl Sagan",        "why": "You defer to authority — Sagan teaches how to evaluate evidence yourself."},
+    "equivocation":             {"title": "Language in Thought and Action",   "author": "S.I. Hayakawa",     "why": "You exploit ambiguous words — Hayakawa unpacks how language distorts reason."},
+}
+
+ETHICS_INSIGHTS = {
+    "utilitarianism":  {"name": "The Utilitarian",  "icon": "⚖️",  "text": "You measure morality by outcomes. You seek the greatest good for the greatest number — a noble but sometimes cold calculus."},
+    "deontology":      {"name": "The Duty-Bound",   "icon": "📜",  "text": "You follow rules regardless of consequence. Kant would approve — your moral compass points to principle, not result."},
+    "virtue ethics":   {"name": "The Virtuous",     "icon": "🏛️",  "text": "You ask what a good person would do. Aristotle's student — character and habit define your moral universe."},
+    "care ethics":     {"name": "The Caretaker",    "icon": "🤝",  "text": "You reason through relationships. Empathy and connection guide your decisions — the ethics of interdependence."},
+    "egoism":          {"name": "The Realist",      "icon": "🎯",  "text": "You believe self-interest is the honest foundation of action. Nietzsche might nod — at least you are honest about it."},
 }
 
 
-def load_model(name: str, path: Path) -> Optional[object]:
-    if not path.exists():
-        log.warning("Model file not found: %s – predictions will be mocked.", path)
-        return None
-    try:
-        with open(path, "rb") as f:
-            model = pickle.load(f)
-        log.info("Loaded model '%s' from %s", name, path)
-        return model
-    except Exception as exc:
-        log.error("Failed to load model '%s': %s", name, exc)
-        return None
+# SCHEMAS
+
+class AnalyzeRequest(BaseModel):
+    scenario: str
+    decision: str
+    reason:   str
 
 
-@app.on_event("startup")
-def startup_event():
-    log.info("Starting Socratic AI …")
-    for name, path in MODEL_PATHS.items():
-        MODELS[name] = load_model(name, path)
-    log.info("Startup complete. Loaded models: %s", [k for k, v in MODELS.items() if v])
+# ROUTES
 
+@app.get("/", response_class=HTMLResponse)
+async def landing(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
-class TextInput(BaseModel):
-    text: str
+@app.get("/game", response_class=HTMLResponse)
+async def game(request: Request):
+    return templates.TemplateResponse("game.html", {"request": request})
 
+@app.get("/result", response_class=HTMLResponse)
+async def result(request: Request):
+    return templates.TemplateResponse("result.html", {"request": request})
 
-class PredictionResult(BaseModel):
-    prediction: str
-    confidence: float
+@app.post("/analyze")
+async def analyze(data: AnalyzeRequest):
+    # build combined text for ethics model
+    ethics_text  = f"{data.scenario} {data.decision} {data.reason}"
+    # use reason text for fallacy detection
+    fallacy_text = data.reason
 
+    ethics_pred  = ethics_model.predict([ethics_text])[0]
+    fallacy_pred = fallacy_model.predict([fallacy_text])[0]
 
-class AnalysisResult(BaseModel):
-    fallacy: PredictionResult
-    ethics: PredictionResult
-    summary: str
+    ethics_info  = ETHICS_INSIGHTS.get(ethics_pred,  {"name": ethics_pred,  "icon": "🧠", "text": ""})
+    book         = BOOK_MAP.get(fallacy_pred, {"title": "Meditations", "author": "Marcus Aurelius", "why": "A classic for any thinker."})
 
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-FALLACY_LABELS = [
-    "Ad Hominem", "Appeal to Authority", "False Dichotomy",
-    "Bandwagon", "Straw Man", "Slippery Slope",
-    "Circular Reasoning", "Hasty Generalization", "No Fallacy Detected",
-]
-
-ETHICS_LABELS = [
-    "Privacy Violation", "Conflict of Interest", "Discrimination",
-    "Deception", "Harm to Others", "Ethical Action",
-]
-
-
-def _predict(model_name: str, text: str) -> PredictionResult:
-    model = MODELS.get(model_name)
-
-    if model is not None:
-        try:
-            proba = model.predict_proba([text])[0]
-            idx = int(np.argmax(proba))
-            label = model.classes_[idx]
-            confidence = round(float(proba[idx]), 4)
-            return PredictionResult(prediction=label, confidence=confidence)
-        except Exception as exc:
-            log.error("Prediction error (%s): %s", model_name, exc)
-            raise HTTPException(status_code=500, detail=f"Model error: {exc}") from exc
-
-    # ── Mock fallback when model file is absent ──────────────────────────────
-    import random, hashlib
-    seed = int(hashlib.md5(text.encode()).hexdigest(), 16) % (2**32)
-    rng = random.Random(seed)
-
-    if model_name == "fallacy":
-        label = rng.choice(FALLACY_LABELS)
-    else:
-        label = rng.choice(ETHICS_LABELS)
-
-    confidence = round(rng.uniform(0.62, 0.97), 4)
-    return PredictionResult(prediction=label, confidence=confidence)
-
-
-def _build_summary(fallacy: PredictionResult, ethics: PredictionResult) -> str:
-    parts = []
-    if fallacy.prediction != "No Fallacy Detected":
-        parts.append(
-            f"The argument contains a **{fallacy.prediction}** "
-            f"(confidence {fallacy.confidence:.0%})."
-        )
-    else:
-        parts.append("No logical fallacy was detected in the argument.")
-
-    if ethics.prediction != "Ethical Action":
-        parts.append(
-            f"From an ethical standpoint, the situation raises concerns about "
-            f"**{ethics.prediction}** (confidence {ethics.confidence:.0%})."
-        )
-    else:
-        parts.append("The action appears ethically sound based on available context.")
-
-    return " ".join(parts)
-
-
-# ── Routes ────────────────────────────────────────────────────────────────────
-@app.get("/")
-def root():
-    return {"message": "Socratic AI API running"}
-
-
-@app.get("/health")
-def health():
-    return {
-        "status": "healthy",
-        "models_loaded": {k: (v is not None) for k, v in MODELS.items()},
-    }
-
-
-@app.post("/predict/fallacy", response_model=PredictionResult)
-def predict_fallacy(body: TextInput):
-    if not body.text.strip():
-        raise HTTPException(status_code=422, detail="Text must not be empty.")
-    log.info("Fallacy request: %.80s…", body.text)
-    return _predict("fallacy", body.text)
-
-
-@app.post("/predict/ethics", response_model=PredictionResult)
-def predict_ethics(body: TextInput):
-    if not body.text.strip():
-        raise HTTPException(status_code=422, detail="Text must not be empty.")
-    log.info("Ethics request: %.80s…", body.text)
-    return _predict("ethics", body.text)
-
-
-@app.post("/analyze", response_model=AnalysisResult)
-def analyze(body: TextInput):
-    if not body.text.strip():
-        raise HTTPException(status_code=422, detail="Text must not be empty.")
-    log.info("Full analysis request: %.80s…", body.text)
-    fallacy_result = _predict("fallacy", body.text)
-    ethics_result  = _predict("ethics",  body.text)
-    summary = _build_summary(fallacy_result, ethics_result)
-    return AnalysisResult(fallacy=fallacy_result, ethics=ethics_result, summary=summary)
+    return JSONResponse({
+        "ethics_label":   ethics_pred,
+        "ethics_name":    ethics_info["name"],
+        "ethics_icon":    ethics_info["icon"],
+        "ethics_text":    ethics_info["text"],
+        "fallacy_label":  fallacy_pred,
+        "book_title":     book["title"],
+        "book_author":    book["author"],
+        "book_why":       book["why"],
+    })
