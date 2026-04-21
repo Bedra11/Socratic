@@ -1,8 +1,4 @@
-/* =========================================
-   SOCRATIC GAME — VINTAGE PARCHMENT STYLE
-   ========================================= */
 
-/* ── Variables ── */
 :root {
   --parchment:    #f4ead5;
   --parchment-dk: #e8d5b0;
@@ -48,7 +44,7 @@ body {
   pointer-events: none;
 }
 
-/* ── Typography ── */
+
 h1, h2, h3 { font-family: var(--font-display); font-weight: 600; }
 
 /* =========================================
@@ -251,7 +247,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; }
   justify-content: center;
 }
 
-/* ── Game Steps ── */
+
 .game-step {
   display: none;
   animation: stepIn 0.5s ease both;
