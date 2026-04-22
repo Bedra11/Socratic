@@ -1,0 +1,45 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main  
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/Socratic
+
+            # pull latest code
+            git pull origin main
+
+            # stop old API
+            screen -S api -X quit || true
+
+            # restart API with new code
+            screen -S api -dm bash -c "
+              source /home/ubuntu/Socratic/.env &&
+              cd /home/ubuntu/Socratic &&
+              python -m uvicorn api.main:app \
+                --host 0.0.0.0 \
+                --port 8000
+            "
+            echo "API restarted"
+
+      - name: Health Check
+        run: |
+          sleep 15
+          curl --fail http://${{ secrets.EC2_HOST }}:8000/ || exit 1
+          echo "API is healthy"
