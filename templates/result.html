@@ -14,7 +14,6 @@
 
   <main class="result-container">
 
-    <!-- Header -->
     <div class="result-header">
       <div class="ornament">❧ ✦ ❧</div>
       <p class="report-label">Your Philosophical Report</p>
@@ -26,26 +25,24 @@
       </div>
     </div>
 
-    <!-- Ethics Card -->
     <article class="result-card ethics-card">
       <div class="card-tag">Ethical Framework</div>
       <div class="ethics-icon" id="ethicsIcon">🧠</div>
       <h2 class="card-title" id="ethicsName">—</h2>
       <p class="card-text" id="ethicsText">—</p>
+      <p class="card-text" id="ethicsExplanation"></p>
       <div class="card-label-row">
         <span class="raw-label">Classification:</span>
         <span class="raw-value" id="ethicsLabel">—</span>
       </div>
     </article>
 
-    <!-- Divider -->
     <div class="result-divider">
       <span class="rule-line"></span>
       <span class="divider-icon">✦</span>
       <span class="rule-line"></span>
     </div>
 
-    <!-- Fallacy Card -->
     <article class="result-card fallacy-card">
       <div class="card-tag">Reasoning Pattern</div>
       <h2 class="card-title" id="fallacyLabel">—</h2>
@@ -53,9 +50,10 @@
         Your reasoning contains a recognizable pattern — one that philosophers
         have studied for centuries. Awareness is the first step to clarity.
       </p>
+      <p class="card-text" id="fallacyExplanation"></p>
+      <p class="card-text" id="personalInsight"></p>
     </article>
 
-    <!-- Book Recommendation -->
     <article class="result-card book-card">
       <div class="card-tag">The Oracle Recommends</div>
       <div class="book-content">
@@ -68,7 +66,11 @@
       </div>
     </article>
 
-    <!-- Actions -->
+    <article class="result-card summary-card" id="summaryCard">
+      <div class="card-tag">Game Summary</div>
+      <p class="card-text" id="chaptersAnalyzedText">—</p>
+    </article>
+
     <div class="result-actions">
       <a href="/game" class="start-btn secondary-btn">
         <span class="btn-inner">Play Again</span>
@@ -82,24 +84,76 @@
   </main>
 
   <script>
-    // Load results from sessionStorage
     const data = JSON.parse(sessionStorage.getItem("socratic_result") || "{}");
+    const allResults = JSON.parse(sessionStorage.getItem("socratic_all_results") || "[]");
+    const allInputs = JSON.parse(sessionStorage.getItem("socratic_all_inputs") || "[]");
 
-    if (data.ethics_icon)  document.getElementById("ethicsIcon").textContent  = data.ethics_icon;
-    if (data.ethics_name)  document.getElementById("ethicsName").textContent  = data.ethics_name;
-    if (data.ethics_text)  document.getElementById("ethicsText").textContent  = data.ethics_text;
-    if (data.ethics_label) document.getElementById("ethicsLabel").textContent = data.ethics_label;
-    if (data.fallacy_label){
-      document.getElementById("fallacyLabel").textContent = data.fallacy_label
-        .split(" ").map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
+    if (data.ethics_icon) {
+      document.getElementById("ethicsIcon").textContent = data.ethics_icon;
     }
-    if (data.book_title)  document.getElementById("bookTitle").textContent  = `"${data.book_title}"`;
-    if (data.book_author) document.getElementById("bookAuthor").textContent = `— ${data.book_author}`;
-    if (data.book_why)    document.getElementById("bookWhy").textContent    = data.book_why;
 
-    // animate cards in
-    document.querySelectorAll(".result-card").forEach((card, i) => {
-      card.style.animationDelay = `${0.2 + i * 0.2}s`;
+    if (data.ethics_name) {
+      document.getElementById("ethicsName").textContent = data.ethics_name;
+    }
+
+    if (data.ethics_text) {
+      document.getElementById("ethicsText").textContent = data.ethics_text;
+    }
+
+    if (data.ethics_explanation) {
+      document.getElementById("ethicsExplanation").textContent = data.ethics_explanation;
+    }
+
+    if (data.ethics_label) {
+      document.getElementById("ethicsLabel").textContent = data.ethics_label;
+    }
+
+    if (data.fallacy_label) {
+      document.getElementById("fallacyLabel").textContent = data.fallacy_label
+        .split(" ")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+    }
+
+    if (data.fallacy_text) {
+      document.getElementById("fallacyText").textContent = data.fallacy_text;
+    }
+
+    if (data.fallacy_explanation) {
+      document.getElementById("fallacyExplanation").textContent = data.fallacy_explanation;
+    }
+
+    if (data.personal_insight) {
+      document.getElementById("personalInsight").textContent = data.personal_insight;
+    }
+
+    if (data.book_title) {
+      document.getElementById("bookTitle").textContent = `"${data.book_title}"`;
+    }
+
+    if (data.book_author) {
+      document.getElementById("bookAuthor").textContent = `— ${data.book_author}`;
+    }
+
+    if (data.book_why) {
+      document.getElementById("bookWhy").textContent = data.book_why;
+    }
+
+    const chaptersAnalyzed =
+      data.chapters_analyzed ||
+      allInputs.length ||
+      allResults.length ||
+      0;
+
+    document.getElementById("chaptersAnalyzedText").textContent =
+      `The final report is based on ${chaptersAnalyzed} chapter${chaptersAnalyzed === 1 ? "" : "s"} of decisions and reasoning.`;
+
+    if (!data.ethics_label && allResults.length > 0) {
+      console.warn("No final result found in socratic_result, but chapter results exist in socratic_all_results.");
+    }
+
+    document.querySelectorAll(".result-card").forEach((card, index) => {
+      card.style.animationDelay = `${0.2 + index * 0.2}s`;
       card.classList.add("card-reveal");
     });
   </script>

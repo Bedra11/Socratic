@@ -15,9 +15,6 @@
   <div class="parchment-overlay"></div>
   <div class="noise-overlay"></div>
 
-  <!-- ========================= -->
-  <!-- PROGRESS BAR -->
-  <!-- ========================= -->
   <div class="progress-bar-container">
     <div class="progress-label">
       Chapter <span id="chapterNum">I</span>
@@ -27,12 +24,8 @@
     </div>
   </div>
 
-  <!-- ========================= -->
-  <!-- MAIN GAME -->
-  <!-- ========================= -->
   <main class="game-container">
 
-    <!-- STEP 1 -->
     <section class="game-step active" id="step-scenario">
       <div class="step-header">
         <span class="step-tag">The Situation</span>
@@ -49,7 +42,6 @@
       </button>
     </section>
 
-    <!-- STEP 2 -->
     <section class="game-step" id="step-decision">
       <div class="step-header">
         <span class="step-tag">Your Decision</span>
@@ -60,7 +52,6 @@
       <div class="choices-grid" id="decisionsGrid"></div>
     </section>
 
-    <!-- STEP 3 -->
     <section class="game-step" id="step-reason">
       <div class="step-header">
         <span class="step-tag">Your Reasoning</span>
@@ -71,7 +62,6 @@
       <div class="choices-grid" id="reasonsGrid"></div>
     </section>
 
-    <!-- STEP 4 -->
     <section class="game-step" id="step-thinking">
       <div class="thinking-content">
         <div class="quill-icon">✦</div>
@@ -86,41 +76,10 @@
 
   </main>
 
-  <!-- ========================= -->
-  <!-- OVERLAY CHAPTER TRANSITION -->
-  <!-- ========================= -->
   <div id="chapterOverlay" class="chapter-overlay">
     Chapter Complete
   </div>
 
-  <!-- ========================= -->
-  <!-- LANGUAGE POPUP -->
-  <!-- ========================= -->
-  <div id="languageModal" class="language-modal">
-
-    <div class="language-box">
-
-      <h2>Results will be generated</h2>
-      <p>Choose your language</p>
-
-      <select id="languageSelect" class="language-dropdown">
-        <option value="en">English 🇬🇧</option>
-        <option value="fr">Français 🇫🇷</option>
-        <option value="ar">العربية 🇸🇦</option>
-        <option value="es">Español 🇪🇸</option>
-      </select>
-
-      <button class="proceed-btn" onclick="submitFinalAnalysis()">
-        Reveal my reasoning <span>→</span>
-      </button>
-
-    </div>
-
-  </div>
-
-  <!-- ========================= -->
-  <!-- SCRIPT -->
-  <!-- ========================= -->
   <script src="/static/js/app.js"></script>
 
 </body>
