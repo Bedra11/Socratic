@@ -4,64 +4,80 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>The Socratic Game — The Inquiry</title>
+
   <link rel="stylesheet" href="/static/css/style.css"/>
+
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
 </head>
+
 <body class="game-body">
 
   <div class="parchment-overlay"></div>
   <div class="noise-overlay"></div>
 
-  <!-- Progress bar -->
+  <!-- ========================= -->
+  <!-- PROGRESS BAR -->
+  <!-- ========================= -->
   <div class="progress-bar-container">
-    <div class="progress-label">Chapter <span id="chapterNum">I</span></div>
+    <div class="progress-label">
+      Chapter <span id="chapterNum">I</span>
+    </div>
     <div class="progress-track">
       <div class="progress-fill" id="progressFill"></div>
     </div>
   </div>
 
+  <!-- ========================= -->
+  <!-- MAIN GAME -->
+  <!-- ========================= -->
   <main class="game-container">
 
-    <!-- STEP 1: Scenario -->
+    <!-- STEP 1 -->
     <section class="game-step active" id="step-scenario">
       <div class="step-header">
         <span class="step-tag">The Situation</span>
         <div class="step-rule"></div>
       </div>
+
       <div class="scenario-card">
         <div class="scenario-number" id="scenarioNumber">I</div>
         <p class="scenario-text" id="scenarioText"></p>
       </div>
+
       <button class="proceed-btn" onclick="showDecisions()">
         Consider this situation <span>→</span>
       </button>
     </section>
 
-    <!-- STEP 2: Decision -->
+    <!-- STEP 2 -->
     <section class="game-step" id="step-decision">
       <div class="step-header">
         <span class="step-tag">Your Decision</span>
         <div class="step-rule"></div>
       </div>
+
       <p class="step-question">What would you do?</p>
       <div class="choices-grid" id="decisionsGrid"></div>
     </section>
 
-    <!-- STEP 3: Reason -->
+    <!-- STEP 3 -->
     <section class="game-step" id="step-reason">
       <div class="step-header">
         <span class="step-tag">Your Reasoning</span>
         <div class="step-rule"></div>
       </div>
+
       <p class="step-question">Why do you believe this is right?</p>
       <div class="choices-grid" id="reasonsGrid"></div>
     </section>
 
-    <!-- STEP 4: Thinking -->
+    <!-- STEP 4 -->
     <section class="game-step" id="step-thinking">
       <div class="thinking-content">
         <div class="quill-icon">✦</div>
-        <p class="thinking-text">The oracle contemplates your answer...</p>
+        <p class="thinking-text">
+          The oracle contemplates your answer...
+        </p>
         <div class="thinking-dots">
           <span></span><span></span><span></span>
         </div>
@@ -70,6 +86,42 @@
 
   </main>
 
+  <!-- ========================= -->
+  <!-- OVERLAY CHAPTER TRANSITION -->
+  <!-- ========================= -->
+  <div id="chapterOverlay" class="chapter-overlay">
+    Chapter Complete
+  </div>
+
+  <!-- ========================= -->
+  <!-- LANGUAGE POPUP -->
+  <!-- ========================= -->
+  <div id="languageModal" class="language-modal">
+
+    <div class="language-box">
+
+      <h2>Results will be generated</h2>
+      <p>Choose your language</p>
+
+      <select id="languageSelect" class="language-dropdown">
+        <option value="en">English 🇬🇧</option>
+        <option value="fr">Français 🇫🇷</option>
+        <option value="ar">العربية 🇸🇦</option>
+        <option value="es">Español 🇪🇸</option>
+      </select>
+
+      <button class="proceed-btn" onclick="submitFinalAnalysis()">
+        Reveal my reasoning <span>→</span>
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- ========================= -->
+  <!-- SCRIPT -->
+  <!-- ========================= -->
   <script src="/static/js/app.js"></script>
+
 </body>
 </html>
