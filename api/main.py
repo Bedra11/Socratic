@@ -2,6 +2,10 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import json
+import os
+import httpx
+from dotenv import load_dotenv
 import os
 import pickle
 import mlflow
@@ -121,3 +125,105 @@ async def analyze(data: AnalyzeRequest):
         "book_author":    book["author"],
         "book_why":       book["why"],
     })
+
+async def get_groq_explanation(
+    scenario: str,
+    decision: str,
+    reason: str,
+    ethics_prediction: str,
+    fallacy_prediction: str,
+    language: str = "english"
+) -> dict:
+    groq_api_key = os.getenv("GROQ_API_KEY", "").strip()
+
+    empty_result = {
+        "ethics_explanation": "",
+        "fallacy_explanation": "",
+        "personal_insight": ""
+    }
+
+    if not groq_api_key:
+        return empty_result
+
+    prompt = f"""
+You are an expert reasoning assistant.
+
+The user wants explanations in this language: {language}.
+
+You must explain:
+1. the ethics prediction
+2. the fallacy prediction
+3. one short personal insight for the user
+
+Context:
+- Scenario: {scenario}
+- Decision: {decision}
+- Reason: {reason}
+- Ethics prediction: {ethics_prediction}
+- Fallacy prediction: {fallacy_prediction}
+
+Rules:
+- Write clearly in the requested language.
+- Keep each field concise but useful.
+- Do not mention that you are an AI.
+- Return ONLY valid JSON.
+- The JSON must have exactly these keys:
+  ethics_explanation
+  fallacy_explanation
+  personal_insight
+"""
+
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "temperature": 0.3,
+        "max_completion_tokens": 400,
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are a multilingual reasoning explainer. Return JSON only."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    }
+
+    headers = {
+        "Authorization": f"Bearer {groq_api_key}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers=headers,
+                json=payload
+            )
+
+        if response.status_code != 200:
+            return empty_result
+
+        response_data = response.json()
+
+        content = (
+            response_data.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+            .strip()
+        )
+
+        if not content:
+            return empty_result
+
+        parsed = json.loads(content)
+
+        return {
+            "ethics_explanation": str(parsed.get("ethics_explanation", "")).strip(),
+            "fallacy_explanation": str(parsed.get("fallacy_explanation", "")).strip(),
+            "personal_insight": str(parsed.get("personal_insight", "")).strip()
+        }
+
+    except Exception:
+        return empty_result
