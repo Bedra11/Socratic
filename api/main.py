@@ -227,3 +227,77 @@ Rules:
 
     except Exception:
         return empty_result
+    
+    
+    
+    from pydantic import BaseModel, Field, field_validator
+
+
+class AnalyzeRequest(BaseModel):
+    scenario: str = Field(..., min_length=1)
+    decision: str = Field(..., min_length=1)
+    reason: str = Field(default="")
+    language: str = Field(default="english")
+
+    @field_validator("scenario", "decision", "reason", "language")
+    @classmethod
+    def clean_text_fields(cls, value: str) -> str:
+        return value.strip() if isinstance(value, str) else value
+
+
+class AnalyzeResponse(BaseModel):
+    scenario: str
+    decision: str
+    reason: str
+    language: str
+    ethics_prediction: str
+    fallacy_prediction: str
+    ethics_explanation: str
+    fallacy_explanation: str
+    personal_insight: str
+    
+    
+@app.post("/analyze", response_model=AnalyzeResponse)
+async def analyze(req: AnalyzeRequest):
+    ensure_model_loaded(ethics_model, "Ethics model")
+    ensure_model_loaded(fallacy_model, "Fallacy model")
+
+    combined_ethics_text = f"{req.scenario} {req.decision} {req.reason}".strip()
+    combined_fallacy_text = f"{req.scenario} {req.decision} {req.reason}".strip()
+
+    try:
+        ethics_prediction = str(ethics_model.predict([combined_ethics_text])[0])
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ethics prediction failed: {str(exc)}"
+        ) from exc
+
+    try:
+        fallacy_prediction = str(fallacy_model.predict([combined_fallacy_text])[0])
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Fallacy prediction failed: {str(exc)}"
+        ) from exc
+
+    groq_result = await get_groq_explanation(
+        scenario=req.scenario,
+        decision=req.decision,
+        reason=req.reason,
+        ethics_prediction=ethics_prediction,
+        fallacy_prediction=fallacy_prediction,
+        language=req.language
+    )
+
+    return {
+        "scenario": req.scenario,
+        "decision": req.decision,
+        "reason": req.reason,
+        "language": req.language,
+        "ethics_prediction": ethics_prediction,
+        "fallacy_prediction": fallacy_prediction,
+        "ethics_explanation": groq_result.get("ethics_explanation", ""),
+        "fallacy_explanation": groq_result.get("fallacy_explanation", ""),
+        "personal_insight": groq_result.get("personal_insight", "")
+    }
