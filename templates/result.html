@@ -6,6 +6,98 @@
   <title>The Socratic Game — Your Report</title>
   <link rel="stylesheet" href="/static/css/style.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+
+  <style>
+    .term-button {
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 5px;
+      transition: opacity 0.2s ease;
+    }
+
+    .term-button:hover {
+      opacity: 0.78;
+    }
+
+    .large-term-button {
+      font-size: inherit;
+      font-weight: inherit;
+      font-family: inherit;
+      line-height: inherit;
+      text-align: left;
+    }
+
+    .term-hint {
+      margin-top: 8px;
+      font-size: 0.88rem;
+      color: rgba(90, 70, 50, 0.72);
+      letter-spacing: 0.03em;
+      font-style: italic;
+    }
+
+    .term-info-box {
+      margin-top: 16px;
+      padding: 18px 20px;
+      border-radius: 14px;
+      background: rgba(255, 250, 240, 0.88);
+      border: 1px solid rgba(122, 98, 54, 0.16);
+      color: #5f4b32;
+      line-height: 1.7;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.45),
+        0 8px 20px rgba(90, 70, 50, 0.08);
+      position: relative;
+    }
+
+    .term-info-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+
+    .term-info-title {
+      font-family: "Cinzel", serif;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #8b6b3f;
+      margin: 0;
+    }
+
+    .term-info-close {
+      border: none;
+      background: transparent;
+      color: #8b6b3f;
+      font-size: 1.2rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+      transition: background 0.2s ease, opacity 0.2s ease;
+    }
+
+    .term-info-close:hover {
+      background: rgba(139, 107, 63, 0.08);
+      opacity: 0.85;
+    }
+
+    .term-info-text {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
 <body class="result-body">
 
@@ -31,9 +123,20 @@
       <h2 class="card-title" id="ethicsName">—</h2>
       <p class="card-text" id="ethicsText">—</p>
       <p class="card-text" id="ethicsExplanation"></p>
+
       <div class="card-label-row">
         <span class="raw-label">Classification:</span>
-        <span class="raw-value" id="ethicsLabel">—</span>
+        <button class="term-button" id="ethicsLabel" type="button">—</button>
+      </div>
+
+      <p class="term-hint">Click the classification to reveal its meaning.</p>
+
+      <div class="term-info-box hidden" id="ethicsTermBox">
+        <div class="term-info-header">
+          <div class="term-info-title" id="ethicsTermTitle">Philosophical Meaning</div>
+          <button class="term-info-close" type="button" onclick="closeInfoBox('ethicsTermBox')">✕</button>
+        </div>
+        <p class="term-info-text" id="ethicsTermDescription"></p>
       </div>
     </article>
 
@@ -45,17 +148,33 @@
 
     <article class="result-card fallacy-card">
       <div class="card-tag">Reasoning Pattern</div>
-      <h2 class="card-title" id="fallacyLabel">—</h2>
+
+      <h2 class="card-title">
+        <button class="term-button large-term-button" id="fallacyLabel" type="button">—</button>
+      </h2>
+
+      <p class="term-hint">Click the reasoning pattern to understand what it means.</p>
+
+      <div class="term-info-box hidden" id="fallacyTermBox">
+        <div class="term-info-header">
+          <div class="term-info-title" id="fallacyTermTitle">Reasoning Meaning</div>
+          <button class="term-info-close" type="button" onclick="closeInfoBox('fallacyTermBox')">✕</button>
+        </div>
+        <p class="term-info-text" id="fallacyTermDescription"></p>
+      </div>
+
       <p class="card-text" id="fallacyText">
         Your reasoning contains a recognizable pattern — one that philosophers
         have studied for centuries. Awareness is the first step to clarity.
       </p>
+
       <p class="card-text" id="fallacyExplanation"></p>
       <p class="card-text" id="personalInsight"></p>
     </article>
 
     <article class="result-card book-card">
       <div class="card-tag">The Oracle Recommends</div>
+
       <div class="book-content">
         <div class="book-spine"></div>
         <div class="book-info">
@@ -76,6 +195,7 @@
         <span class="btn-inner">Play Again</span>
         <span class="btn-arrow">↺</span>
       </a>
+
       <a href="/" class="text-link">Return to the beginning</a>
     </div>
 
@@ -87,6 +207,67 @@
     const data = JSON.parse(sessionStorage.getItem("socratic_result") || "{}");
     const allResults = JSON.parse(sessionStorage.getItem("socratic_all_results") || "[]");
     const allInputs = JSON.parse(sessionStorage.getItem("socratic_all_inputs") || "[]");
+
+    const philosophyGlossary = {
+      care_ethics: "Care ethics is an ethical approach centered on empathy, relationships, responsibility, and sensitivity to the needs of others. It values compassion and human connection in moral decisions.",
+      deontology: "Deontology is an ethical theory based on duty, rules, and moral principles. It judges an action mainly by whether it is right in itself, not by the consequences it produces.",
+      egoism: "Egoism is the view that actions are guided mainly by self-interest. It focuses on what benefits the individual making the choice.",
+      utilitarianism: "Utilitarianism evaluates actions by their consequences. A decision is morally good if it creates the greatest overall good or happiness for the greatest number of people.",
+      virtue_ethics: "Virtue ethics focuses on character. It asks what a wise, honest, courageous, and morally admirable person would do in a given situation.",
+
+      ad_hominem: "Ad hominem is a fallacy where someone attacks the person instead of addressing the argument itself.",
+      ad_populum: "Ad populum is a fallacy that treats something as true, good, or right simply because many people believe it or support it.",
+      appeal_to_emotion: "Appeal to emotion is a fallacy where fear, pity, guilt, anger, or another emotion is used instead of solid reasoning.",
+      circular_reasoning: "Circular reasoning happens when the conclusion is simply repeated in different words instead of being supported by actual evidence.",
+      equivocation: "Equivocation is a fallacy where a word or phrase changes meaning during an argument, creating confusion and misleading reasoning.",
+      fallacy_of_credibility: "Fallacy of credibility happens when a claim is accepted or rejected mainly because of who says it, rather than because of the strength of the evidence or reasoning.",
+      fallacy_of_extension: "Fallacy of extension happens when someone exaggerates, oversimplifies, or distorts an argument beyond its real form, making it easier to attack or dismiss.",
+      fallacy_of_logic: "Fallacy of logic refers to a flaw in the structure of reasoning itself, where the conclusion does not properly follow from the premises.",
+      fallacy_of_relevance: "Fallacy of relevance happens when reasons are given that are not truly connected to the issue being argued, even if they sound persuasive.",
+      false_causality: "False causality is the mistake of assuming that one thing caused another without sufficient evidence of a real causal link.",
+      false_dilemma: "False dilemma presents only two options as if they are the only possibilities, even though other alternatives may exist.",
+      faulty_generalization: "Faulty generalization builds a broad conclusion from weak, limited, or unrepresentative evidence.",
+      intentional: "Intentional reasoning focuses heavily on motives or intended meaning. In this context, it suggests the argument may rely too much on assumed intention rather than clear logical support."
+    };
+
+    function normalizeTerm(term) {
+      return String(term || "")
+        .trim()
+        .toLowerCase()
+        .replace(/&/g, "and")
+        .replace(/-/g, "_")
+        .replace(/\//g, "_")
+        .replace(/\s+/g, "_");
+    }
+
+    function toTitleCase(text) {
+      return String(text || "")
+        .split(" ")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+    }
+
+    function closeInfoBox(boxId) {
+      document.getElementById(boxId).classList.add("hidden");
+    }
+
+    function setInfoBox(term, boxId, titleId, textId, fallbackTitle) {
+      const box = document.getElementById(boxId);
+      const title = document.getElementById(titleId);
+      const text = document.getElementById(textId);
+
+      const normalized = normalizeTerm(term);
+
+      const description =
+        philosophyGlossary[normalized] ||
+        "This term does not yet have a saved glossary explanation, but it represents a category identified by the game.";
+
+      title.textContent =
+        `${fallbackTitle}: ${toTitleCase(String(term).replace(/_/g, " "))}`;
+
+      text.textContent = description;
+      box.classList.remove("hidden");
+    }
 
     if (data.ethics_icon) {
       document.getElementById("ethicsIcon").textContent = data.ethics_icon;
@@ -105,14 +286,13 @@
     }
 
     if (data.ethics_label) {
-      document.getElementById("ethicsLabel").textContent = data.ethics_label;
+      document.getElementById("ethicsLabel").textContent =
+        toTitleCase(data.ethics_label.replace(/_/g, " "));
     }
 
     if (data.fallacy_label) {
-      document.getElementById("fallacyLabel").textContent = data.fallacy_label
-        .split(" ")
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
+      document.getElementById("fallacyLabel").textContent =
+        toTitleCase(data.fallacy_label.replace(/_/g, " "));
     }
 
     if (data.fallacy_text) {
@@ -148,9 +328,28 @@
     document.getElementById("chaptersAnalyzedText").textContent =
       `The final report is based on ${chaptersAnalyzed} chapter${chaptersAnalyzed === 1 ? "" : "s"} of decisions and reasoning.`;
 
-    if (!data.ethics_label && allResults.length > 0) {
-      console.warn("No final result found in socratic_result, but chapter results exist in socratic_all_results.");
-    }
+    const ethicsLabelButton = document.getElementById("ethicsLabel");
+    const fallacyLabelButton = document.getElementById("fallacyLabel");
+
+    ethicsLabelButton.addEventListener("click", () => {
+      setInfoBox(
+        ethicsLabelButton.textContent,
+        "ethicsTermBox",
+        "ethicsTermTitle",
+        "ethicsTermDescription",
+        "Philosophical Meaning"
+      );
+    });
+
+    fallacyLabelButton.addEventListener("click", () => {
+      setInfoBox(
+        fallacyLabelButton.textContent,
+        "fallacyTermBox",
+        "fallacyTermTitle",
+        "fallacyTermDescription",
+        "Reasoning Meaning"
+      );
+    });
 
     document.querySelectorAll(".result-card").forEach((card, index) => {
       card.style.animationDelay = `${0.2 + index * 0.2}s`;

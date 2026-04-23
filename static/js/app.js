@@ -73,6 +73,25 @@ const SCENARIOS = [
   }
 ];
 
+const GOODREADS_BOOK_LINKS = {
+  "Meditations|Marcus Aurelius": "https://www.goodreads.com/book/show/30659.Meditations",
+  "Nicomachean Ethics|Aristotle": "https://www.goodreads.com/book/show/19068.Nicomachean_Ethics",
+  "Groundwork of the Metaphysics of Morals|Immanuel Kant": "https://www.goodreads.com/book/show/112803.Groundwork_of_the_Metaphysics_of_Morals",
+  "Utilitarianism|John Stuart Mill": "https://www.goodreads.com/book/show/584638.Utilitarianism",
+  "The Republic|Plato": "https://www.goodreads.com/book/show/30289.The_Republic",
+  "Beyond Good and Evil|Friedrich Nietzsche": "https://www.goodreads.com/book/show/12321.Beyond_Good_and_Evil",
+  "The Righteous Mind|Jonathan Haidt": "https://www.goodreads.com/book/show/11324722-the-righteous-mind",
+  "Thinking, Fast and Slow|Daniel Kahneman": "https://www.goodreads.com/book/show/11468377-thinking-fast-and-slow",
+  "On Liberty|John Stuart Mill": "https://www.goodreads.com/book/show/385228.On_Liberty",
+  "The Prince|Niccolò Machiavelli": "https://www.goodreads.com/book/show/28862.The_Prince",
+  "Thus Spoke Zarathustra|Friedrich Nietzsche": "https://www.goodreads.com/book/show/51893.Thus_Spoke_Zarathustra",
+  "Justice: What's the Right Thing to Do?|Michael J. Sandel": "https://www.goodreads.com/book/show/6452731-justice",
+  "Moral Tribes|Joshua Greene": "https://www.goodreads.com/book/show/17707599-moral-tribes",
+  "The Art of Thinking Clearly|Rolf Dobelli": "https://www.goodreads.com/book/show/16248196-the-art-of-thinking-clearly",
+  "Critique of Practical Reason|Immanuel Kant": "https://www.goodreads.com/book/show/18288.Critique_of_Practical_Reason",
+  "Fear and Trembling|Søren Kierkegaard": "https://www.goodreads.com/book/show/24964.Fear_and_Trembling"
+};
+
 let currentScenarioIndex = 0;
 let selectedDecision = "";
 let selectedReason = "";
@@ -92,6 +111,37 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.style.display = "none";
   }
 });
+
+function normalizeBookKey(title, author) {
+  return `${String(title || "").trim()}|${String(author || "").trim()}`;
+}
+
+function getGoodreadsSearchLink(title, author) {
+  const query = encodeURIComponent(`${title || ""} ${author || ""}`.trim());
+  return `https://www.goodreads.com/search?q=${query}`;
+}
+
+function getGoodreadsBookLink(title, author) {
+  const key = normalizeBookKey(title, author);
+  return GOODREADS_BOOK_LINKS[key] || getGoodreadsSearchLink(title, author);
+}
+
+function attachBookLink(result) {
+  if (!result || typeof result !== "object") {
+    return result;
+  }
+
+  const enrichedResult = { ...result };
+
+  if (enrichedResult.book_title) {
+    enrichedResult.book_link = getGoodreadsBookLink(
+      enrichedResult.book_title,
+      enrichedResult.book_author || ""
+    );
+  }
+
+  return enrichedResult;
+}
 
 function loadScenario(index) {
   const scenario = SCENARIOS[index];
@@ -189,13 +239,14 @@ async function sendToAPI() {
     }
 
     const data = await response.json();
+    const enrichedData = attachBookLink(data);
 
     allResults.push({
       chapter: currentScenarioIndex + 1,
       scenario: scenarioText,
       decision: selectedDecision,
       reason: selectedReason,
-      ...data
+      ...enrichedData
     });
 
     if (currentScenarioIndex < SCENARIOS.length - 1) {
@@ -251,10 +302,11 @@ async function finishGame() {
     }
 
     const finalData = await response.json();
+    const enrichedFinalData = attachBookLink(finalData);
 
     sessionStorage.setItem("socratic_all_results", JSON.stringify(allResults));
     sessionStorage.setItem("socratic_all_inputs", JSON.stringify(allChapterInputs));
-    sessionStorage.setItem("socratic_result", JSON.stringify(finalData));
+    sessionStorage.setItem("socratic_result", JSON.stringify(enrichedFinalData));
 
     window.location.href = "/result";
 
@@ -285,7 +337,7 @@ async function finishGame() {
     const representativeFallacy =
       allResults.find(r => (r.fallacy_prediction || r.fallacy_label) === dominantFallacy) || {};
 
-    const fallbackResult = {
+    const fallbackResult = attachBookLink({
       language: "english",
       ethics_prediction: dominantEthics,
       fallacy_prediction: dominantFallacy,
@@ -301,7 +353,7 @@ async function finishGame() {
       fallacy_explanation: representativeFallacy.fallacy_explanation || "",
       personal_insight: representativeFallacy.personal_insight || "",
       chapters_analyzed: allChapterInputs.length
-    };
+    });
 
     sessionStorage.setItem("socratic_all_results", JSON.stringify(allResults));
     sessionStorage.setItem("socratic_all_inputs", JSON.stringify(allChapterInputs));
