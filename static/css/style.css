@@ -53,7 +53,7 @@ h1, h2, h3 {
 }
 
 /* =========================================
-   LANDING PAGE
+   LANDING PAGE — 2 COLUMN LAYOUT
    ========================================= */
 .landing-body main,
 .game-body main,
@@ -62,27 +62,47 @@ h1, h2, h3 {
   z-index: 2;
 }
 
+.landing-body main {
+  position: relative;
+  z-index: 2;
+}
+
+/* MAIN GRID */
 .landing-container {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 60px 32px;
-  text-align: center;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  height: 100vh;
+  width: 100%;
+  padding: 60px 80px;
+  gap: 40px;
+  overflow: hidden;
+}
+
+/* LEFT PANEL */
+.left-panel {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  gap: 28px;
+  max-width: 650px;
+}
+
+/* RIGHT PANEL */
+.right-panel {
+  display: flex;
   align-items: center;
-  gap: 32px;
-  min-height: 100vh;
   justify-content: center;
 }
 
+/* ORNAMENTS */
 .ornament {
-  font-family: var(--font-body);
   color: var(--gold);
   font-size: 1.2rem;
   letter-spacing: 0.5rem;
   opacity: 0.7;
 }
 
+/* TEXT BLOCKS */
 .pre-title {
   font-family: var(--font-display);
   font-size: 0.7rem;
@@ -94,12 +114,10 @@ h1, h2, h3 {
 
 .main-title {
   font-family: var(--font-display);
-  font-size: clamp(2.8rem, 8vw, 5rem);
+  font-size: clamp(3rem, 6vw, 5rem);
   line-height: 1.1;
   color: var(--ink);
   text-shadow: 2px 2px 0 rgba(139,105,20,0.15);
-  letter-spacing: 0.05em;
-  animation: fadeInDown 1s ease both;
 }
 
 .title-rule {
@@ -125,56 +143,43 @@ h1, h2, h3 {
   font-size: 1.15rem;
   line-height: 1.9;
   color: var(--ink-soft);
-  font-style: normal;
-  max-width: 400px;
-  animation: fadeIn 1.2s ease 0.3s both;
+  max-width: 420px;
 }
 
+/* QUOTE */
 .landing-quote {
   border-left: 3px solid var(--gold);
   padding: 12px 20px;
-  text-align: left;
-  max-width: 400px;
-  width: 100%;
+  max-width: 420px;
   background: rgba(139,105,20,0.05);
-  animation: fadeIn 1s ease 0.5s both;
 }
 
 .landing-quote p {
-  font-size: 1.05rem;
   font-style: italic;
   color: var(--ink-soft);
-  line-height: 1.7;
 }
 
 .landing-quote cite {
-  display: block;
-  margin-top: 8px;
   font-size: 0.85rem;
   color: var(--ink-faint);
-  font-style: normal;
-  letter-spacing: 0.05em;
 }
 
-/* ── Buttons ── */
+/* BUTTON */
 .start-btn {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 36px;
+  gap: 14px;
+  padding: 20px 50px;
   background: var(--green-dk);
   color: var(--parchment);
   font-family: var(--font-display);
-  font-size: 0.85rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   text-decoration: none;
   border: 2px solid var(--green-md);
-  cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  animation: fadeIn 1s ease 0.7s both;
 }
 
 .start-btn::before {
@@ -210,13 +215,18 @@ h1, h2, h3 {
   background: rgba(139,105,20,0.1);
 }
 
+.start-btn span {
+  position: relative;
+  z-index: 1;
+}
+
+/* FOOT TEXT */
 .landing-descriptor {
   font-size: 0.8rem;
   color: var(--ink-faint);
   letter-spacing: 0.2em;
   text-transform: uppercase;
 }
-
 /* =========================================
    GAME PAGE
    ========================================= */
