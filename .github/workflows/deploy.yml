@@ -1,9 +1,10 @@
+# .github/workflows/deploy.yml
 name: Deploy to Production
 
 on:
   push:
     branches:
-      - main  
+      - main
 
 jobs:
   deploy:
@@ -11,35 +12,49 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host:     ${{ secrets.EC2_HOST }}
           username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key:      ${{ secrets.EC2_SSH_KEY }}
+          port:     22
+          timeout:  60s
           script: |
             cd /home/ubuntu/Socratic
 
             # pull latest code
             git pull origin main
 
-            # stop old API
-            screen -S api -X quit || true
+            # stop and remove old container
+            docker stop socratic-api || true
+            docker rm   socratic-api || true
 
-            # restart API with new code
-            screen -S api -dm bash -c "
-              source /home/ubuntu/Socratic/.env &&
-              cd /home/ubuntu/Socratic &&
-              python -m uvicorn api.main:app \
-                --host 0.0.0.0 \
-                --port 8000
-            "
-            echo "API restarted"
+            # build new image
+            docker build -t socratic-api .
+
+            # run new container
+            docker run -d \
+              --name socratic-api \
+              --restart always \
+              -p 8000:8000 \
+              -e MLFLOW_TRACKING_URI="${{ secrets.MLFLOW_TRACKING_URI }}" \
+              -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+              -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+              -e AWS_DEFAULT_REGION="eu-west-3" \
+              -e MODEL_NAME_ETHICS="socratic-ethics-classifier" \
+              -e MODEL_NAME_FALLACY="socratic-fallacy-classifier" \
+              -e GROQ_API_KEY="${{ secrets.GROQ_API_KEY }}" \
+              socratic-api
+
+            echo "Container started"
 
       - name: Health Check
         run: |
-          sleep 15
-          curl --fail http://${{ secrets.EC2_HOST }}:8000/ || exit 1
+          echo "Waiting for API to start..."
+          sleep 30
+          curl --fail --retry 5 --retry-delay 5 --retry-connrefused \
+            http://${{ secrets.EC2_HOST }}:8000/ || exit 1
           echo "API is healthy"

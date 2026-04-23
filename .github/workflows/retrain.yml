@@ -1,9 +1,10 @@
+# .github/workflows/retrain.yml
 name: Retrain Models
 
 on:
-  workflow_dispatch:    
+  workflow_dispatch:
   schedule:
-    - cron: '0 2 * * 1' 
+    - cron: '0 2 * * 1'
 
 jobs:
   retrain:
@@ -11,41 +12,46 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Retrain on EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host:     ${{ secrets.EC2_HOST }}
           username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key:      ${{ secrets.EC2_SSH_KEY }}
+          port:     22
+          timeout:  300s
           script: |
             cd /home/ubuntu/Socratic
-
-            # pull latest code
-            git pull origin main
-
-            # load env
             source /home/ubuntu/Socratic/.env
+            source /home/ubuntu/venv/bin/activate
 
-            # run full pipeline
+            git pull origin main
             dvc pull
             dvc repro
             dvc push
 
-            # restart API with new model
-            screen -S api -X quit || true
-            screen -S api -dm bash -c "
-              source /home/ubuntu/Socratic/.env &&
-              cd /home/ubuntu/Socratic &&
-              python -m uvicorn api.main:app \
-                --host 0.0.0.0 \
-                --port 8000
-            "
-            echo "Retrain complete and API restarted"
+            # restart container with new models
+            docker stop socratic-api || true
+            docker rm   socratic-api || true
+            docker build -t socratic-api .
+            docker run -d \
+              --name socratic-api \
+              --restart always \
+              -p 8000:8000 \
+              -e MLFLOW_TRACKING_URI="$MLFLOW_TRACKING_URI" \
+              -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+              -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+              -e AWS_DEFAULT_REGION="eu-west-3" \
+              -e GROQ_API_KEY="$GROQ_API_KEY" \
+              socratic-api
+
+            echo "Retrain complete"
 
       - name: Health Check
         run: |
-          sleep 20
-          curl --fail http://${{ secrets.EC2_HOST }}:8000/ || exit 1
-          echo "API is healthy after retrain"
+          sleep 30
+          curl --fail --retry 5 --retry-delay 5 \
+            http://${{ secrets.EC2_HOST }}:8000/ || exit 1
+          echo "API healthy after retrain"
