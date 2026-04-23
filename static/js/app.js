@@ -1,7 +1,4 @@
-
-
 const ROMAN = ["I", "II", "III", "IV", "V"];
-
 
 const SCENARIOS = [
   {
@@ -76,94 +73,83 @@ const SCENARIOS = [
   }
 ];
 
-
 let currentScenarioIndex = 0;
-let selectedDecision     = "";
-let selectedReason       = "";
+let selectedDecision = "";
+let selectedReason = "";
 
-// ─────────────────────────────────────────
-// INIT — load first scenario on page ready
-// ─────────────────────────────────────────
+// Stores every API response from all chapters
+let allResults = [];
+
+// Stores every raw user answer from all chapters
+let allChapterInputs = [];
+
 document.addEventListener("DOMContentLoaded", () => {
   loadScenario(currentScenarioIndex);
   updateProgress(0);
+
+  const overlay = document.getElementById("chapterOverlay");
+  if (overlay) {
+    overlay.style.display = "none";
+  }
 });
 
-// ─────────────────────────────────────────
-// LOAD SCENARIO
-// ─────────────────────────────────────────
 function loadScenario(index) {
   const scenario = SCENARIOS[index];
+  if (!scenario) return;
 
-  document.getElementById("scenarioText").textContent   = scenario.text;
+  document.getElementById("scenarioText").textContent = scenario.text;
   document.getElementById("scenarioNumber").textContent = ROMAN[index];
-  document.getElementById("chapterNum").textContent     = ROMAN[index];
+  document.getElementById("chapterNum").textContent = ROMAN[index];
 
-  // reset state
   selectedDecision = "";
-  selectedReason   = "";
+  selectedReason = "";
 
-  // show step 1
   showStep("step-scenario");
   updateProgress((index / SCENARIOS.length) * 100);
 }
 
-// ─────────────────────────────────────────
-// SHOW DECISIONS (Step 2)
-// ─────────────────────────────────────────
 function showDecisions() {
   const scenario = SCENARIOS[currentScenarioIndex];
-  const grid     = document.getElementById("decisionsGrid");
+  const grid = document.getElementById("decisionsGrid");
   grid.innerHTML = "";
 
   scenario.decisions.forEach(decision => {
     const btn = document.createElement("button");
-    btn.className   = "choice-btn";
+    btn.className = "choice-btn";
     btn.textContent = decision;
-    btn.onclick     = () => selectDecision(decision, btn);
+    btn.onclick = () => selectDecision(decision, btn);
     grid.appendChild(btn);
   });
 
   showStep("step-decision");
 }
 
-// ─────────────────────────────────────────
-// SELECT DECISION
-// ─────────────────────────────────────────
 function selectDecision(decision, btn) {
-  // remove previous selection
   document.querySelectorAll("#decisionsGrid .choice-btn")
     .forEach(b => b.classList.remove("selected"));
 
   btn.classList.add("selected");
   selectedDecision = decision;
 
-  // slight delay then show reasons
   setTimeout(() => showReasons(), 400);
 }
 
-// ─────────────────────────────────────────
-// SHOW REASONS (Step 3)
-// ─────────────────────────────────────────
 function showReasons() {
   const scenario = SCENARIOS[currentScenarioIndex];
-  const grid     = document.getElementById("reasonsGrid");
+  const grid = document.getElementById("reasonsGrid");
   grid.innerHTML = "";
 
   scenario.reasons.forEach(reason => {
     const btn = document.createElement("button");
-    btn.className   = "choice-btn";
+    btn.className = "choice-btn";
     btn.textContent = reason;
-    btn.onclick     = () => selectReason(reason, btn);
+    btn.onclick = () => selectReason(reason, btn);
     grid.appendChild(btn);
   });
 
   showStep("step-reason");
 }
 
-// ─────────────────────────────────────────
-// SELECT REASON
-// ─────────────────────────────────────────
 function selectReason(reason, btn) {
   document.querySelectorAll("#reasonsGrid .choice-btn")
     .forEach(b => b.classList.remove("selected"));
@@ -171,53 +157,163 @@ function selectReason(reason, btn) {
   btn.classList.add("selected");
   selectedReason = reason;
 
-  // send to API after short delay
   setTimeout(() => sendToAPI(), 500);
 }
 
-// ─────────────────────────────────────────
-// SEND TO API
-// ─────────────────────────────────────────
 async function sendToAPI() {
   showStep("step-thinking");
 
+  const scenarioText = SCENARIOS[currentScenarioIndex].text;
+
+  allChapterInputs.push({
+    chapter: currentScenarioIndex + 1,
+    scenario: scenarioText,
+    decision: selectedDecision,
+    reason: selectedReason
+  });
+
   try {
     const response = await fetch("/analyze", {
-      method:  "POST",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        scenario: SCENARIOS[currentScenarioIndex].text,
+        scenario: scenarioText,
         decision: selectedDecision,
-        reason:   selectedReason
+        reason: selectedReason,
+        language: "english"
       })
     });
 
-    if (!response.ok) throw new Error("API error");
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
 
     const data = await response.json();
 
-    // store in sessionStorage for result page
-    sessionStorage.setItem("socratic_result", JSON.stringify(data));
+    allResults.push({
+      chapter: currentScenarioIndex + 1,
+      scenario: scenarioText,
+      decision: selectedDecision,
+      reason: selectedReason,
+      ...data
+    });
 
-    // small dramatic pause before redirect
-    await sleep(1500);
+    if (currentScenarioIndex < SCENARIOS.length - 1) {
+      await sleep(800);
+      showChapterTransition();
+    } else {
+      await sleep(800);
+      await finishGame();
+    }
+
+  } catch (err) {
+    console.error("API error:", err);
+  }
+}
+
+function showChapterTransition() {
+  const overlay = document.getElementById("chapterOverlay");
+
+  if (overlay) {
+    overlay.style.display = "flex";
+    overlay.textContent = `Chapter ${ROMAN[currentScenarioIndex]} Complete`;
+  }
+
+  setTimeout(() => {
+    if (overlay) {
+      overlay.style.display = "none";
+    }
+
+    currentScenarioIndex++;
+    loadScenario(currentScenarioIndex);
+  }, 1200);
+}
+
+async function finishGame() {
+  if (!allResults.length || !allChapterInputs.length) return;
+
+  try {
+    const response = await fetch("/analyze-final", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chapters: allChapterInputs.map(item => ({
+          scenario: item.scenario,
+          decision: item.decision,
+          reason: item.reason
+        })),
+        language: "english"
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Final API error: ${response.status}`);
+    }
+
+    const finalData = await response.json();
+
+    sessionStorage.setItem("socratic_all_results", JSON.stringify(allResults));
+    sessionStorage.setItem("socratic_all_inputs", JSON.stringify(allChapterInputs));
+    sessionStorage.setItem("socratic_result", JSON.stringify(finalData));
+
     window.location.href = "/result";
 
   } catch (err) {
-    console.error("Analysis failed:", err);
-    // fallback — go to result with empty data
-    await sleep(1000);
+    console.error("Final API error:", err);
+
+    // Fallback local if /analyze-final fails
+    const ethicsCount = {};
+    const fallacyCount = {};
+
+    allResults.forEach(result => {
+      const ethicsKey = result.ethics_prediction || result.ethics_label || "unknown";
+      const fallacyKey = result.fallacy_prediction || result.fallacy_label || "unknown";
+
+      ethicsCount[ethicsKey] = (ethicsCount[ethicsKey] || 0) + 1;
+      fallacyCount[fallacyKey] = (fallacyCount[fallacyKey] || 0) + 1;
+    });
+
+    const dominantEthics = Object.keys(ethicsCount)
+      .reduce((a, b) => ethicsCount[a] >= ethicsCount[b] ? a : b);
+
+    const dominantFallacy = Object.keys(fallacyCount)
+      .reduce((a, b) => fallacyCount[a] >= fallacyCount[b] ? a : b);
+
+    const representativeEthics =
+      allResults.find(r => (r.ethics_prediction || r.ethics_label) === dominantEthics) || {};
+
+    const representativeFallacy =
+      allResults.find(r => (r.fallacy_prediction || r.fallacy_label) === dominantFallacy) || {};
+
+    const fallbackResult = {
+      language: "english",
+      ethics_prediction: dominantEthics,
+      fallacy_prediction: dominantFallacy,
+      ethics_label: dominantEthics,
+      ethics_name: representativeEthics.ethics_name || dominantEthics,
+      ethics_icon: representativeEthics.ethics_icon || "🧠",
+      ethics_text: representativeEthics.ethics_text || representativeEthics.ethics_explanation || "",
+      fallacy_label: dominantFallacy,
+      book_title: representativeFallacy.book_title || "Meditations",
+      book_author: representativeFallacy.book_author || "Marcus Aurelius",
+      book_why: representativeFallacy.book_why || "A classic for any thinker.",
+      ethics_explanation: representativeEthics.ethics_explanation || "",
+      fallacy_explanation: representativeFallacy.fallacy_explanation || "",
+      personal_insight: representativeFallacy.personal_insight || "",
+      chapters_analyzed: allChapterInputs.length
+    };
+
+    sessionStorage.setItem("socratic_all_results", JSON.stringify(allResults));
+    sessionStorage.setItem("socratic_all_inputs", JSON.stringify(allChapterInputs));
+    sessionStorage.setItem("socratic_result", JSON.stringify(fallbackResult));
+
     window.location.href = "/result";
   }
 }
 
-// ─────────────────────────────────────────
-// STEP TRANSITIONS
-// ─────────────────────────────────────────
 function showStep(stepId) {
-  document.querySelectorAll(".game-step").forEach(s => {
-    s.classList.remove("active");
-  });
+  document.querySelectorAll(".game-step")
+    .forEach(s => s.classList.remove("active"));
 
   const target = document.getElementById(stepId);
   if (target) {
@@ -225,17 +321,13 @@ function showStep(stepId) {
   }
 }
 
-// ─────────────────────────────────────────
-// PROGRESS BAR
-// ─────────────────────────────────────────
 function updateProgress(percent) {
   const fill = document.getElementById("progressFill");
-  if (fill) fill.style.width = `${percent}%`;
+  if (fill) {
+    fill.style.width = `${percent}%`;
+  }
 }
 
-// ─────────────────────────────────────────
-// UTILS
-// ─────────────────────────────────────────
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
