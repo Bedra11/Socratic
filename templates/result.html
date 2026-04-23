@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>The Socratic Game — Your Report</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+</head>
+<body class="result-body">
+
+  <div class="parchment-overlay"></div>
+  <div class="noise-overlay"></div>
+
+  <main class="result-container">
+
+    <!-- Header -->
+    <div class="result-header">
+      <div class="ornament">❧ ✦ ❧</div>
+      <p class="report-label">Your Philosophical Report</p>
+      <h1 class="result-title">The Oracle Speaks</h1>
+      <div class="title-rule">
+        <span class="rule-line"></span>
+        <span class="rule-diamond">◆</span>
+        <span class="rule-line"></span>
+      </div>
+    </div>
+
+    <!-- Ethics Card -->
+    <article class="result-card ethics-card">
+      <div class="card-tag">Ethical Framework</div>
+      <div class="ethics-icon" id="ethicsIcon">🧠</div>
+      <h2 class="card-title" id="ethicsName">—</h2>
+      <p class="card-text" id="ethicsText">—</p>
+      <div class="card-label-row">
+        <span class="raw-label">Classification:</span>
+        <span class="raw-value" id="ethicsLabel">—</span>
+      </div>
+    </article>
+
+    <!-- Divider -->
+    <div class="result-divider">
+      <span class="rule-line"></span>
+      <span class="divider-icon">✦</span>
+      <span class="rule-line"></span>
+    </div>
+
+    <!-- Fallacy Card -->
+    <article class="result-card fallacy-card">
+      <div class="card-tag">Reasoning Pattern</div>
+      <h2 class="card-title" id="fallacyLabel">—</h2>
+      <p class="card-text" id="fallacyText">
+        Your reasoning contains a recognizable pattern — one that philosophers
+        have studied for centuries. Awareness is the first step to clarity.
+      </p>
+    </article>
+
+    <!-- Book Recommendation -->
+    <article class="result-card book-card">
+      <div class="card-tag">The Oracle Recommends</div>
+      <div class="book-content">
+        <div class="book-spine"></div>
+        <div class="book-info">
+          <p class="book-title" id="bookTitle">—</p>
+          <p class="book-author" id="bookAuthor">—</p>
+          <p class="book-why" id="bookWhy">—</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- Actions -->
+    <div class="result-actions">
+      <a href="/game" class="start-btn secondary-btn">
+        <span class="btn-inner">Play Again</span>
+        <span class="btn-arrow">↺</span>
+      </a>
+      <a href="/" class="text-link">Return to the beginning</a>
+    </div>
+
+    <div class="ornament bottom-ornament">❧ ✦ ❧</div>
+
+  </main>
+
+  <script>
+    // Load results from sessionStorage
+    const data = JSON.parse(sessionStorage.getItem("socratic_result") || "{}");
+
+    if (data.ethics_icon)  document.getElementById("ethicsIcon").textContent  = data.ethics_icon;
+    if (data.ethics_name)  document.getElementById("ethicsName").textContent  = data.ethics_name;
+    if (data.ethics_text)  document.getElementById("ethicsText").textContent  = data.ethics_text;
+    if (data.ethics_label) document.getElementById("ethicsLabel").textContent = data.ethics_label;
+    if (data.fallacy_label){
+      document.getElementById("fallacyLabel").textContent = data.fallacy_label
+        .split(" ").map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
+    }
+    if (data.book_title)  document.getElementById("bookTitle").textContent  = `"${data.book_title}"`;
+    if (data.book_author) document.getElementById("bookAuthor").textContent = `— ${data.book_author}`;
+    if (data.book_why)    document.getElementById("bookWhy").textContent    = data.book_why;
+
+    // animate cards in
+    document.querySelectorAll(".result-card").forEach((card, i) => {
+      card.style.animationDelay = `${0.2 + i * 0.2}s`;
+      card.classList.add("card-reveal");
+    });
+  </script>
+
+</body>
+</html>

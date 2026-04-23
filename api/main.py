@@ -1,59 +1,123 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-import pickle
+# api/main.py
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
-
-app = FastAPI(title="Socratic API")
-
-# -----------------------------
-# Load models (at startup)
-# -----------------------------
-
-print("Loading models...")
-
-ethics_model = pickle.load(open("models/ethics_model.pkl", "rb"))
-fallacy_model = pickle.load(open("models/fallacy_model.pkl", "rb"))
-
-print("Models loaded successfully")
+import pickle
+import mlflow
+import mlflow.sklearn
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+import warnings
+warnings.filterwarnings("ignore")
 
 
-# -----------------------------
-# Request schema
-# -----------------------------
+# APP INIT
 
-class TextRequest(BaseModel):
-    text: str
+app = FastAPI(title="Socratic API", version="1.0.0")
 
-
-# -----------------------------
-# Basic routes
-# -----------------------------
-
-@app.get("/")
-def root():
-    return {"message": "Socratic API is running"}
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
 
-# -----------------------------
-# Prediction endpoints
-# -----------------------------
+# MODEL LOADING — from MLflow Registry
 
-@app.post("/predict/ethics")
-def predict_ethics(req: TextRequest):
-    pred = ethics_model.predict([req.text])[0]
-    return {
-        "input": req.text,
-        "prediction": pred
-    }
+MLFLOW_URI          = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+MODEL_NAME_ETHICS   = os.getenv("MODEL_NAME_ETHICS",  "socratic-ethics-classifier")
+MODEL_NAME_FALLACY  = os.getenv("MODEL_NAME_FALLACY", "socratic-fallacy-classifier")
 
-@app.post("/predict/fallacy")
-def predict_fallacy(req: TextRequest):
-    pred = fallacy_model.predict([req.text])[0]
-    return {
-        "input": req.text,
-        "prediction": pred
-    }
+mlflow.set_tracking_uri(MLFLOW_URI)
+
+def load_model_from_registry(name: str):
+    try:
+        model = mlflow.sklearn.load_model(f"models:/{name}/Staging")
+        print(f" Loaded from MLflow Registry: {name}")
+        return model
+    except Exception as e:
+        print(f"  MLflow Registry failed ({e}), loading from local pickle...")
+        path = f"models/{name.split('-')[1]}_model.pkl"
+        if os.path.exists(path):
+            return pickle.load(open(path, "rb"))
+        raise RuntimeError(f"Cannot load model: {name}")
+
+ethics_model  = load_model_from_registry(MODEL_NAME_ETHICS)
+fallacy_model = load_model_from_registry(MODEL_NAME_FALLACY)
+
+print(" Socratic API ready")
+
+
+# BOOK RECOMMENDATIONS
+
+BOOK_MAP = {
+    "faulty generalization":    {"title": "Thinking, Fast and Slow",         "author": "Daniel Kahneman",   "why": "You jump to broad conclusions — this book reveals why our minds overgeneralize."},
+    "false causality":          {"title": "The Book of Why",                  "author": "Judea Pearl",       "why": "You confuse correlation with cause — Pearl teaches rigorous causal thinking."},
+    "circular reasoning":       {"title": "Gödel, Escher, Bach",              "author": "Douglas Hofstadter","why": "You argue in loops — this book explores self-reference and paradox beautifully."},
+    "ad hominem":               {"title": "How to Win an Argument",           "author": "Arthur Schopenhauer","why": "You attack people, not ideas — Schopenhauer exposes every rhetorical trick."},
+    "ad populum":               {"title": "Extraordinary Popular Delusions",  "author": "Charles Mackay",    "why": "You follow the crowd — Mackay documents how majorities are systematically wrong."},
+    "appeal to emotion":        {"title": "The Righteous Mind",               "author": "Jonathan Haidt",    "why": "You reason with feeling — Haidt explains why emotions drive moral judgment."},
+    "false dilemma":            {"title": "Justice",                          "author": "Michael Sandel",    "why": "You see only two options — Sandel reveals the rich complexity of moral choices."},
+    "fallacy of relevance":     {"title": "Critical Thinking",                "author": "Richard Paul",      "why": "You use red herrings — this book trains attention to what actually matters."},
+    "fallacy of logic":         {"title": "An Introduction to Logic",         "author": "Irving Copi",       "why": "Your logical structure breaks down — Copi rebuilds it from the ground up."},
+    "intentional":              {"title": "Influence",                        "author": "Robert Cialdini",   "why": "You manipulate rather than argue — Cialdini exposes every persuasion trick."},
+    "fallacy of extension":     {"title": "The Straw Man Fallacy",            "author": "Scott Aikin",       "why": "You attack exaggerated versions of ideas — this book dissects exactly that."},
+    "fallacy of credibility":   {"title": "The Demon-Haunted World",          "author": "Carl Sagan",        "why": "You defer to authority — Sagan teaches how to evaluate evidence yourself."},
+    "equivocation":             {"title": "Language in Thought and Action",   "author": "S.I. Hayakawa",     "why": "You exploit ambiguous words — Hayakawa unpacks how language distorts reason."},
+}
+
+ETHICS_INSIGHTS = {
+    "utilitarianism":  {"name": "The Utilitarian",  "icon": "⚖️",  "text": "You measure morality by outcomes. You seek the greatest good for the greatest number — a noble but sometimes cold calculus."},
+    "deontology":      {"name": "The Duty-Bound",   "icon": "📜",  "text": "You follow rules regardless of consequence. Kant would approve — your moral compass points to principle, not result."},
+    "virtue ethics":   {"name": "The Virtuous",     "icon": "🏛️",  "text": "You ask what a good person would do. Aristotle's student — character and habit define your moral universe."},
+    "care ethics":     {"name": "The Caretaker",    "icon": "🤝",  "text": "You reason through relationships. Empathy and connection guide your decisions — the ethics of interdependence."},
+    "egoism":          {"name": "The Realist",      "icon": "🎯",  "text": "You believe self-interest is the honest foundation of action. Nietzsche might nod — at least you are honest about it."},
+}
+
+
+# SCHEMAS
+
+class AnalyzeRequest(BaseModel):
+    scenario: str
+    decision: str
+    reason:   str
+
+
+# ROUTES
+
+@app.get("/", response_class=HTMLResponse)
+async def landing(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/game", response_class=HTMLResponse)
+async def game(request: Request):
+    return templates.TemplateResponse("game.html", {"request": request})
+
+@app.get("/result", response_class=HTMLResponse)
+async def result(request: Request):
+    return templates.TemplateResponse("result.html", {"request": request})
+
+@app.post("/analyze")
+async def analyze(data: AnalyzeRequest):
+    # build combined text for ethics model
+    ethics_text  = f"{data.scenario} {data.decision} {data.reason}"
+    # use reason text for fallacy detection
+    fallacy_text = data.reason
+
+    ethics_pred  = ethics_model.predict([ethics_text])[0]
+    fallacy_pred = fallacy_model.predict([fallacy_text])[0]
+
+    ethics_info  = ETHICS_INSIGHTS.get(ethics_pred,  {"name": ethics_pred,  "icon": "🧠", "text": ""})
+    book         = BOOK_MAP.get(fallacy_pred, {"title": "Meditations", "author": "Marcus Aurelius", "why": "A classic for any thinker."})
+
+    return JSONResponse({
+        "ethics_label":   ethics_pred,
+        "ethics_name":    ethics_info["name"],
+        "ethics_icon":    ethics_info["icon"],
+        "ethics_text":    ethics_info["text"],
+        "fallacy_label":  fallacy_pred,
+        "book_title":     book["title"],
+        "book_author":    book["author"],
+        "book_why":       book["why"],
+    })
