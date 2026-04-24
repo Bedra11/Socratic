@@ -1,3 +1,8 @@
+/* ===============================================================
+   THE SOCRATIC GAME — app.js
+   Game logic only. No inline CSS. No inline HTML styles.
+   =============================================================== */
+
 const ROMAN = ["I", "II", "III", "IV", "V"];
 
 const SCENARIOS = [
@@ -95,23 +100,19 @@ const GOODREADS_BOOK_LINKS = {
 let currentScenarioIndex = 0;
 let selectedDecision = "";
 let selectedReason = "";
-
-// Stores every API response from all chapters
 let allResults = [];
-
-// Stores every raw user answer from all chapters
 let allChapterInputs = [];
 
+/* ---- INIT ---- */
 document.addEventListener("DOMContentLoaded", () => {
   loadScenario(currentScenarioIndex);
   updateProgress(0);
 
   const overlay = document.getElementById("chapterOverlay");
-  if (overlay) {
-    overlay.style.display = "none";
-  }
+  if (overlay) overlay.style.display = "none";
 });
 
+/* ---- BOOK LINK HELPERS ---- */
 function normalizeBookKey(title, author) {
   return `${String(title || "").trim()}|${String(author || "").trim()}`;
 }
@@ -127,22 +128,15 @@ function getGoodreadsBookLink(title, author) {
 }
 
 function attachBookLink(result) {
-  if (!result || typeof result !== "object") {
-    return result;
+  if (!result || typeof result !== "object") return result;
+  const enriched = { ...result };
+  if (enriched.book_title) {
+    enriched.book_link = getGoodreadsBookLink(enriched.book_title, enriched.book_author || "");
   }
-
-  const enrichedResult = { ...result };
-
-  if (enrichedResult.book_title) {
-    enrichedResult.book_link = getGoodreadsBookLink(
-      enrichedResult.book_title,
-      enrichedResult.book_author || ""
-    );
-  }
-
-  return enrichedResult;
+  return enriched;
 }
 
+/* ---- SCENARIO FLOW ---- */
 function loadScenario(index) {
   const scenario = SCENARIOS[index];
   if (!scenario) return;
@@ -177,10 +171,8 @@ function showDecisions() {
 function selectDecision(decision, btn) {
   document.querySelectorAll("#decisionsGrid .choice-btn")
     .forEach(b => b.classList.remove("selected"));
-
   btn.classList.add("selected");
   selectedDecision = decision;
-
   setTimeout(() => showReasons(), 400);
 }
 
@@ -203,13 +195,12 @@ function showReasons() {
 function selectReason(reason, btn) {
   document.querySelectorAll("#reasonsGrid .choice-btn")
     .forEach(b => b.classList.remove("selected"));
-
   btn.classList.add("selected");
   selectedReason = reason;
-
   setTimeout(() => sendToAPI(), 500);
 }
 
+/* ---- API CALL ---- */
 async function sendToAPI() {
   showStep("step-thinking");
 
@@ -234,19 +225,17 @@ async function sendToAPI() {
       })
     });
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
 
     const data = await response.json();
-    const enrichedData = attachBookLink(data);
+    const enriched = attachBookLink(data);
 
     allResults.push({
       chapter: currentScenarioIndex + 1,
       scenario: scenarioText,
       decision: selectedDecision,
       reason: selectedReason,
-      ...enrichedData
+      ...enriched
     });
 
     if (currentScenarioIndex < SCENARIOS.length - 1) {
@@ -262,24 +251,22 @@ async function sendToAPI() {
   }
 }
 
+/* ---- CHAPTER TRANSITION ---- */
 function showChapterTransition() {
   const overlay = document.getElementById("chapterOverlay");
-
   if (overlay) {
     overlay.style.display = "flex";
     overlay.textContent = `Chapter ${ROMAN[currentScenarioIndex]} Complete`;
   }
 
   setTimeout(() => {
-    if (overlay) {
-      overlay.style.display = "none";
-    }
-
+    if (overlay) overlay.style.display = "none";
     currentScenarioIndex++;
     loadScenario(currentScenarioIndex);
   }, 1200);
 }
 
+/* ---- FINISH GAME ---- */
 async function finishGame() {
   if (!allResults.length || !allChapterInputs.length) return;
 
@@ -297,61 +284,52 @@ async function finishGame() {
       })
     });
 
-    if (!response.ok) {
-      throw new Error(`Final API error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`Final API error: ${response.status}`);
 
     const finalData = await response.json();
-    const enrichedFinalData = attachBookLink(finalData);
+    const enrichedFinal = attachBookLink(finalData);
 
     sessionStorage.setItem("socratic_all_results", JSON.stringify(allResults));
     sessionStorage.setItem("socratic_all_inputs", JSON.stringify(allChapterInputs));
-    sessionStorage.setItem("socratic_result", JSON.stringify(enrichedFinalData));
+    sessionStorage.setItem("socratic_result", JSON.stringify(enrichedFinal));
 
     window.location.href = "/result";
 
   } catch (err) {
     console.error("Final API error:", err);
 
-    // Fallback local if /analyze-final fails
+    // Fallback: derive result locally from per-chapter results
     const ethicsCount = {};
     const fallacyCount = {};
 
     allResults.forEach(result => {
-      const ethicsKey = result.ethics_prediction || result.ethics_label || "unknown";
-      const fallacyKey = result.fallacy_prediction || result.fallacy_label || "unknown";
-
-      ethicsCount[ethicsKey] = (ethicsCount[ethicsKey] || 0) + 1;
-      fallacyCount[fallacyKey] = (fallacyCount[fallacyKey] || 0) + 1;
+      const ek = result.ethics_prediction || result.ethics_label || "unknown";
+      const fk = result.fallacy_prediction || result.fallacy_label || "unknown";
+      ethicsCount[ek] = (ethicsCount[ek] || 0) + 1;
+      fallacyCount[fk] = (fallacyCount[fk] || 0) + 1;
     });
 
-    const dominantEthics = Object.keys(ethicsCount)
-      .reduce((a, b) => ethicsCount[a] >= ethicsCount[b] ? a : b);
+    const dominantEthics  = Object.keys(ethicsCount).reduce((a, b) => ethicsCount[a]  >= ethicsCount[b]  ? a : b);
+    const dominantFallacy = Object.keys(fallacyCount).reduce((a, b) => fallacyCount[a] >= fallacyCount[b] ? a : b);
 
-    const dominantFallacy = Object.keys(fallacyCount)
-      .reduce((a, b) => fallacyCount[a] >= fallacyCount[b] ? a : b);
-
-    const representativeEthics =
-      allResults.find(r => (r.ethics_prediction || r.ethics_label) === dominantEthics) || {};
-
-    const representativeFallacy =
-      allResults.find(r => (r.fallacy_prediction || r.fallacy_label) === dominantFallacy) || {};
+    const repEthics  = allResults.find(r => (r.ethics_prediction  || r.ethics_label)  === dominantEthics)  || {};
+    const repFallacy = allResults.find(r => (r.fallacy_prediction || r.fallacy_label) === dominantFallacy) || {};
 
     const fallbackResult = attachBookLink({
       language: "english",
       ethics_prediction: dominantEthics,
       fallacy_prediction: dominantFallacy,
       ethics_label: dominantEthics,
-      ethics_name: representativeEthics.ethics_name || dominantEthics,
-      ethics_icon: representativeEthics.ethics_icon || "🧠",
-      ethics_text: representativeEthics.ethics_text || representativeEthics.ethics_explanation || "",
+      ethics_name: repEthics.ethics_name || dominantEthics,
+      ethics_icon: repEthics.ethics_icon || "🧠",
+      ethics_text: repEthics.ethics_text || repEthics.ethics_explanation || "",
       fallacy_label: dominantFallacy,
-      book_title: representativeFallacy.book_title || "Meditations",
-      book_author: representativeFallacy.book_author || "Marcus Aurelius",
-      book_why: representativeFallacy.book_why || "A classic for any thinker.",
-      ethics_explanation: representativeEthics.ethics_explanation || "",
-      fallacy_explanation: representativeFallacy.fallacy_explanation || "",
-      personal_insight: representativeFallacy.personal_insight || "",
+      book_title: repFallacy.book_title || "Meditations",
+      book_author: repFallacy.book_author || "Marcus Aurelius",
+      book_why: repFallacy.book_why || "A classic for any thinker.",
+      ethics_explanation: repEthics.ethics_explanation || "",
+      fallacy_explanation: repFallacy.fallacy_explanation || "",
+      personal_insight: repFallacy.personal_insight || "",
       chapters_analyzed: allChapterInputs.length
     });
 
@@ -363,21 +341,16 @@ async function finishGame() {
   }
 }
 
+/* ---- UI HELPERS ---- */
 function showStep(stepId) {
-  document.querySelectorAll(".game-step")
-    .forEach(s => s.classList.remove("active"));
-
+  document.querySelectorAll(".game-step").forEach(s => s.classList.remove("active"));
   const target = document.getElementById(stepId);
-  if (target) {
-    target.classList.add("active");
-  }
+  if (target) target.classList.add("active");
 }
 
 function updateProgress(percent) {
   const fill = document.getElementById("progressFill");
-  if (fill) {
-    fill.style.width = `${percent}%`;
-  }
+  if (fill) fill.style.width = `${percent}%`;
 }
 
 function sleep(ms) {

@@ -26,8 +26,8 @@ stages:
     outs:
     - path: data/processed/ethics_label_encoder.pkl
       hash: md5
-      md5: f062c7d63ffde7f34df4af1ad64e8e18
-      size: 312
+      md5: dfcd0aa254ada8ff1f864e9d77c1315a
+      size: 311
     - path: data/processed/ethics_test.csv
       hash: md5
       md5: aceb5a163f7a476578445e139cef83b9
@@ -38,8 +38,8 @@ stages:
       size: 47833
     - path: data/processed/fallacy_label_encoder.pkl
       hash: md5
-      md5: 134f2bbf584daa373e5a5ac38a4dc6ff
-      size: 487
+      md5: bc8ca779091847591a6b49606411912f
+      size: 486
     - path: data/processed/fallacy_test.csv
       hash: md5
       md5: 4ae7c0d00ed12519c3f4e4590c2bb640
@@ -70,12 +70,12 @@ stages:
     outs:
     - path: models/ethics_model.pkl
       hash: md5
-      md5: 8606fa5adad0ab15b51f6e28e980e6fd
-      size: 96398
+      md5: 414b12a6db851e234874ec714106a082
+      size: 91559
     - path: models/fallacy_model.pkl
       hash: md5
-      md5: 9da7f4c6885c2022a5f40e0d11bfe90e
-      size: 1869894
+      md5: e46bd23f27e777d885e3747f33460100
+      size: 1818206
   evaluate:
     cmd: python src/evaluate.py
     deps:
@@ -89,12 +89,12 @@ stages:
       size: 73910
     - path: models/ethics_model.pkl
       hash: md5
-      md5: 8606fa5adad0ab15b51f6e28e980e6fd
-      size: 96398
+      md5: 414b12a6db851e234874ec714106a082
+      size: 91559
     - path: models/fallacy_model.pkl
       hash: md5
-      md5: 9da7f4c6885c2022a5f40e0d11bfe90e
-      size: 1869894
+      md5: e46bd23f27e777d885e3747f33460100
+      size: 1818206
     - path: params.yaml
       hash: md5
       md5: fb9ad76cf00344a7d92075d3e98b24a2
@@ -117,12 +117,12 @@ stages:
       size: 248
     - path: models/ethics_model.pkl
       hash: md5
-      md5: 8606fa5adad0ab15b51f6e28e980e6fd
-      size: 96398
+      md5: 414b12a6db851e234874ec714106a082
+      size: 91559
     - path: models/fallacy_model.pkl
       hash: md5
-      md5: 9da7f4c6885c2022a5f40e0d11bfe90e
-      size: 1869894
+      md5: e46bd23f27e777d885e3747f33460100
+      size: 1818206
     - path: src/register.py
       hash: md5
       md5: 71173b9088d8274605be43c84dd1edc1
