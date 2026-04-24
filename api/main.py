@@ -26,9 +26,20 @@ warnings.filterwarnings("ignore")
 
 app = FastAPI(title="Socratic API", version="2.1.0")
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
 
+
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+app.mount(
+    "/static",
+    StaticFiles(directory=os.path.join(BASE_DIR, "static")),
+    name="static"
+)
+
+templates = Jinja2Templates(
+    directory=os.path.join(BASE_DIR, "templates")
+)
 # =========================
 # MODEL LOADING (MLflow)
 # =========================
@@ -472,17 +483,17 @@ ethics_explanation, fallacy_explanation, personal_insight
 
 @app.get("/", response_class=HTMLResponse)
 async def landing(request: Request):
-    return templates.TemplateResponse(request, "index.html")
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.get("/game", response_class=HTMLResponse)
 async def game(request: Request):
-    return templates.TemplateResponse(request, "game.html")
+    return templates.TemplateResponse("game.html", {"request": request})
 
 
 @app.get("/result", response_class=HTMLResponse)
 async def result(request: Request):
-    return templates.TemplateResponse(request, "result.html")
+    return templates.TemplateResponse("result.html", {"request": request})
 
 
 # =========================
