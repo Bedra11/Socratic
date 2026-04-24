@@ -6,99 +6,8 @@
   <title>The Socratic Game — Your Report</title>
   <link rel="stylesheet" href="/static/css/style.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
-
-  <style>
-    .term-button {
-      background: none;
-      border: none;
-      padding: 0;
-      margin: 0;
-      font: inherit;
-      color: inherit;
-      cursor: pointer;
-      text-decoration: underline;
-      text-underline-offset: 5px;
-      transition: opacity 0.2s ease;
-    }
-
-    .term-button:hover {
-      opacity: 0.78;
-    }
-
-    .large-term-button {
-      font-size: inherit;
-      font-weight: inherit;
-      font-family: inherit;
-      line-height: inherit;
-      text-align: left;
-    }
-
-    .term-hint {
-      margin-top: 8px;
-      font-size: 0.88rem;
-      color: rgba(90, 70, 50, 0.72);
-      letter-spacing: 0.03em;
-      font-style: italic;
-    }
-
-    .term-info-box {
-      margin-top: 16px;
-      padding: 18px 20px;
-      border-radius: 14px;
-      background: rgba(255, 250, 240, 0.88);
-      border: 1px solid rgba(122, 98, 54, 0.16);
-      color: #5f4b32;
-      line-height: 1.7;
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.45),
-        0 8px 20px rgba(90, 70, 50, 0.08);
-      position: relative;
-    }
-
-    .term-info-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      margin-bottom: 10px;
-    }
-
-    .term-info-title {
-      font-family: "Cinzel", serif;
-      font-size: 1rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #8b6b3f;
-      margin: 0;
-    }
-
-    .term-info-close {
-      border: none;
-      background: transparent;
-      color: #8b6b3f;
-      font-size: 1.2rem;
-      line-height: 1;
-      cursor: pointer;
-      padding: 2px 6px;
-      border-radius: 6px;
-      transition: background 0.2s ease, opacity 0.2s ease;
-    }
-
-    .term-info-close:hover {
-      background: rgba(139, 107, 63, 0.08);
-      opacity: 0.85;
-    }
-
-    .term-info-text {
-      margin: 0;
-      font-size: 1rem;
-    }
-
-    .hidden {
-      display: none;
-    }
-  </style>
 </head>
+
 <body class="result-body">
 
   <div class="parchment-overlay"></div>
@@ -117,6 +26,10 @@
       </div>
     </div>
 
+    <div id="emptyStateNote" class="empty-state-note hidden">
+      No final result was found yet. Please complete the game first, then return to this page.
+    </div>
+
     <article class="result-card ethics-card">
       <div class="card-tag">Ethical Framework</div>
       <div class="ethics-icon" id="ethicsIcon">🧠</div>
@@ -128,8 +41,6 @@
         <span class="raw-label">Classification:</span>
         <button class="term-button" id="ethicsLabel" type="button">—</button>
       </div>
-
-      <p class="term-hint">Click the classification to reveal its meaning.</p>
 
       <div class="term-info-box hidden" id="ethicsTermBox">
         <div class="term-info-header">
@@ -177,10 +88,26 @@
 
       <div class="book-content">
         <div class="book-spine"></div>
+
         <div class="book-info">
-          <p class="book-title" id="bookTitle">—</p>
+          <p class="book-title">
+            <span class="book-hover-container">
+              <span id="bookTitle" class="book-link book-link-inline" tabindex="0">—</span>
+
+              <span class="book-hover-popup" id="bookPopup">
+                <strong id="popupTitle">Book Title</strong>
+                <em id="popupAuthor">Author</em>
+                <span id="popupWhy">Book recommendation reason.</span>
+                <a id="popupLink" href="#" target="_blank" rel="noopener noreferrer">
+                  Open book →
+                </a>
+              </span>
+            </span>
+          </p>
+
           <p class="book-author" id="bookAuthor">—</p>
           <p class="book-why" id="bookWhy">—</p>
+          <p class="term-hint">Hover over the book title to preview the recommendation.</p>
         </div>
       </div>
     </article>
@@ -269,58 +196,103 @@
       box.classList.remove("hidden");
     }
 
-    if (data.ethics_icon) {
-      document.getElementById("ethicsIcon").textContent = data.ethics_icon;
+    function pickFallbackFinalResult(results) {
+      if (!Array.isArray(results) || results.length === 0) {
+        return null;
+      }
+
+      const last = results[results.length - 1] || {};
+
+      return {
+        ethics_icon: last.ethics_icon || "🧠",
+        ethics_name: last.ethics_name || "Undefined",
+        ethics_text: last.ethics_text || "",
+        ethics_explanation: last.ethics_explanation || "",
+        ethics_label: last.ethics_label || last.ethics_prediction || "",
+        fallacy_label: last.fallacy_label || last.fallacy_prediction || "",
+        fallacy_text: last.fallacy_text || "",
+        fallacy_explanation: last.fallacy_explanation || "",
+        personal_insight: last.personal_insight || "",
+        book_title: last.book_title || "Meditations",
+        book_author: last.book_author || "Marcus Aurelius",
+        book_why: last.book_why || "A classic for any thinker.",
+        book_link: last.book_link || "",
+        chapters_analyzed: results.length
+      };
     }
 
-    if (data.ethics_name) {
-      document.getElementById("ethicsName").textContent = data.ethics_name;
+    const finalData = Object.keys(data).length ? data : pickFallbackFinalResult(allResults) || {};
+    const hasAnyResult = Object.keys(finalData).length > 0;
+
+    if (!hasAnyResult) {
+      document.getElementById("emptyStateNote").classList.remove("hidden");
     }
 
-    if (data.ethics_text) {
-      document.getElementById("ethicsText").textContent = data.ethics_text;
+    if (finalData.ethics_icon) {
+      document.getElementById("ethicsIcon").textContent = finalData.ethics_icon;
     }
 
-    if (data.ethics_explanation) {
-      document.getElementById("ethicsExplanation").textContent = data.ethics_explanation;
+    if (finalData.ethics_name) {
+      document.getElementById("ethicsName").textContent = finalData.ethics_name;
     }
 
-    if (data.ethics_label) {
+    if (finalData.ethics_text) {
+      document.getElementById("ethicsText").textContent = finalData.ethics_text;
+    }
+
+    if (finalData.ethics_explanation) {
+      document.getElementById("ethicsExplanation").textContent = finalData.ethics_explanation;
+    }
+
+    if (finalData.ethics_label) {
       document.getElementById("ethicsLabel").textContent =
-        toTitleCase(data.ethics_label.replace(/_/g, " "));
+        toTitleCase(String(finalData.ethics_label).replace(/_/g, " "));
     }
 
-    if (data.fallacy_label) {
+    if (finalData.fallacy_label) {
       document.getElementById("fallacyLabel").textContent =
-        toTitleCase(data.fallacy_label.replace(/_/g, " "));
+        toTitleCase(String(finalData.fallacy_label).replace(/_/g, " "));
     }
 
-    if (data.fallacy_text) {
-      document.getElementById("fallacyText").textContent = data.fallacy_text;
+    if (finalData.fallacy_text) {
+      document.getElementById("fallacyText").textContent = finalData.fallacy_text;
     }
 
-    if (data.fallacy_explanation) {
-      document.getElementById("fallacyExplanation").textContent = data.fallacy_explanation;
+    if (finalData.fallacy_explanation) {
+      document.getElementById("fallacyExplanation").textContent = finalData.fallacy_explanation;
     }
 
-    if (data.personal_insight) {
-      document.getElementById("personalInsight").textContent = data.personal_insight;
+    if (finalData.personal_insight) {
+      document.getElementById("personalInsight").textContent = finalData.personal_insight;
     }
 
-    if (data.book_title) {
-      document.getElementById("bookTitle").textContent = `"${data.book_title}"`;
+    if (finalData.book_title) {
+      document.getElementById("bookTitle").textContent = `"${finalData.book_title}"`;
+      document.getElementById("popupTitle").textContent = finalData.book_title;
     }
 
-    if (data.book_author) {
-      document.getElementById("bookAuthor").textContent = `— ${data.book_author}`;
+    if (finalData.book_author) {
+      document.getElementById("bookAuthor").textContent = `— ${finalData.book_author}`;
+      document.getElementById("popupAuthor").textContent = finalData.book_author;
     }
 
-    if (data.book_why) {
-      document.getElementById("bookWhy").textContent = data.book_why;
+    if (finalData.book_why) {
+      document.getElementById("bookWhy").textContent = finalData.book_why;
+      document.getElementById("popupWhy").textContent = finalData.book_why;
+    }
+
+    const popupLink = document.getElementById("popupLink");
+
+    if (finalData.book_link) {
+      popupLink.href = finalData.book_link;
+      popupLink.style.display = "inline-block";
+    } else {
+      popupLink.removeAttribute("href");
+      popupLink.style.display = "none";
     }
 
     const chaptersAnalyzed =
-      data.chapters_analyzed ||
+      finalData.chapters_analyzed ||
       allInputs.length ||
       allResults.length ||
       0;
@@ -332,6 +304,7 @@
     const fallacyLabelButton = document.getElementById("fallacyLabel");
 
     ethicsLabelButton.addEventListener("click", () => {
+      if (!finalData.ethics_label) return;
       setInfoBox(
         ethicsLabelButton.textContent,
         "ethicsTermBox",
@@ -342,6 +315,7 @@
     });
 
     fallacyLabelButton.addEventListener("click", () => {
+      if (!finalData.fallacy_label) return;
       setInfoBox(
         fallacyLabelButton.textContent,
         "fallacyTermBox",
