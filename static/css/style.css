@@ -35,6 +35,9 @@ body {
   position: relative;
   overflow-x: hidden;
 }
+body.landing-body {
+  overflow: hidden;  
+}
 
 /* ---- OVERLAYS ---- */
 .parchment-overlay {
@@ -99,16 +102,32 @@ h1, h2, h3 {
 
 /* ================= LANDING PAGE ================= */
 .landing-container {
-  max-width: 640px;
+  height: 100vh;                 
+  display: grid;               
+  grid-template-columns: 1.2fr 1fr;
+
+  align-items: center;
+  gap: 80px;
+
+  max-width: 1200px;           
   margin: 0 auto;
-  padding: 60px 32px;
-  text-align: center;
+  padding: 0 60px;
+}
+.left-panel {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 32px;
-  min-height: 100vh;
   justify-content: center;
+
+  gap: 28px;
+  max-width: 520px;
+}
+
+.right-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  height: 100%;
 }
 
 .pre-title {
@@ -176,21 +195,29 @@ h1, h2, h3 {
 .start-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center; 
+
   gap: 12px;
-  padding: 16px 36px;
+  padding: 18px 42px; 
+
   background: var(--green-dk);
   color: var(--parchment);
+
   font-family: var(--font-display);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   text-decoration: none;
+
   border: 2px solid var(--green-md);
   cursor: pointer;
+
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+
   animation: fadeIn 1s ease 0.7s both;
+  transform: translateY(-20px);
 }
 
 .start-btn::before {
@@ -540,6 +567,12 @@ h1, h2, h3 {
   position: relative;
   box-shadow: 3px 3px 12px var(--shadow);
   opacity: 0;
+  overflow: visible; /* allow popup to escape card bounds */
+}
+
+/* Book card must paint above the summary card that follows in the DOM */
+.book-card {
+  z-index: 2;
 }
 
 .card-reveal {
@@ -639,6 +672,7 @@ h1, h2, h3 {
   color: var(--ink);
   margin-bottom: 4px;
   font-style: italic;
+  display: inline-block;
 }
 
 .book-author {
@@ -751,8 +785,7 @@ h1, h2, h3 {
   font-size: 1rem;
 }
 
-/* ---- BOOK LINK & POPUP ---- */
-/* ---- BOOK LINK & HOVER POPUP ---- */
+
 .book-link-inline {
   cursor: pointer;
   color: var(--ink);
@@ -768,45 +801,57 @@ h1, h2, h3 {
   text-decoration-color: var(--gold);
 }
 
+/* ===============================================================
+   BOOK HOVER POPUP
+   =============================================================== */
+
+/* Anchor */
+.book-hover-container {
+  position: relative;
+  display: inline-block;
+}
+
+/* Popup box */
+.book-hover-popup {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+
+  z-index: 9999;
+  width: 290px;
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: auto;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  padding: 18px 20px 16px;
+
+  background: var(--parchment);
+  border: 1px solid rgba(139,105,20,0.28);
+  border-top: 3px solid var(--gold);
+
+  box-shadow:
+    0 10px 28px rgba(44,24,16,0.18),
+    0 3px 8px rgba(44,24,16,0.08);
+
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+}
+
+/* Show popup — single source of truth */
 .book-hover-container:hover .book-hover-popup,
 .book-hover-container:focus-within .book-hover-popup,
 .book-hover-popup:hover {
   opacity: 1;
   visibility: visible;
-  pointer-events: auto;
-}
-
-/* Hidden by default — shown only on hover/focus via opacity + visibility */
-.book-hover-popup {
-  position: absolute;
-  left: 0;
-  top: calc(100% + 12px);
-  z-index: 200;
-  width: 290px;
-
-  /* Visibility toggle — never use conflicting display values */
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
   transform: translateY(0);
-  transition: opacity 0.22s ease, visibility 0.22s ease, transform 0.22s ease;
-
-  /* Appearance */
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: var(--parchment);
-  border: 1px solid rgba(139,105,20,0.28);
-  border-top: 3px solid var(--gold);
-  box-shadow:
-    0 8px 28px rgba(44,24,16,0.18),
-    0 2px 6px rgba(44,24,16,0.08);
-  padding: 18px 20px 16px;
-  border-radius: 0 0 3px 3px;
-  font-style: normal;
 }
 
-/* Small arrow pointing up */
+/* Arrow */
 .book-hover-popup::before {
   content: '';
   position: absolute;
@@ -820,35 +865,23 @@ h1, h2, h3 {
   transform: rotate(45deg);
 }
 
-/* Show on hover or keyboard focus */
-.book-hover-container:hover .book-hover-popup,
-.book-hover-container:focus-within .book-hover-popup {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-
-/* Popup inner elements */
+/* Popup content */
 .book-hover-popup .popup-label {
   font-family: var(--font-display);
   font-size: 0.58rem;
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--gold);
-  margin-bottom: 2px;
 }
 
 .book-hover-popup .popup-title {
   font-family: var(--font-display);
   font-size: 0.95rem;
   color: var(--ink);
-  letter-spacing: 0.03em;
   line-height: 1.3;
 }
 
 .book-hover-popup .popup-author {
-  font-family: var(--font-body);
   font-size: 0.88rem;
   color: var(--gold);
   font-style: italic;
@@ -857,22 +890,21 @@ h1, h2, h3 {
 .book-hover-popup .popup-divider {
   height: 1px;
   background: linear-gradient(90deg, rgba(139,105,20,0.25), transparent);
-  margin: 2px 0;
 }
 
 .book-hover-popup .popup-why {
-  font-family: var(--font-body);
   font-size: 0.92rem;
   line-height: 1.6;
   color: var(--ink-soft);
   font-style: italic;
 }
 
+/* Button */
 .book-hover-popup .popup-link {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  margin-top: 4px;
+  gap: 6px;
+  margin-top: 6px;
   padding: 8px 14px;
   background: var(--green-dk);
   color: var(--parchment);
@@ -883,8 +915,7 @@ h1, h2, h3 {
   text-decoration: none;
   border: 1px solid var(--green-md);
   border-radius: 2px;
-  transition: background 0.2s ease, border-color 0.2s ease;
-  align-self: flex-start;
+  transition: all 0.2s ease;
 }
 
 .book-hover-popup .popup-link:hover {
@@ -945,6 +976,24 @@ h1, h2, h3 {
 
 /* ================= RESPONSIVE ================= */
 @media (max-width: 480px) {
+
+  .landing-container {
+  flex-direction: column;   
+  align-items: center;
+  text-align: center;
+}
+
+.left-panel {
+  text-align: center;     
+    gap: 20px;
+}
+
+.right-panel {
+  width: 100%;
+  justify-content: center;
+  margin-top: 20px;
+}
+
   .landing-container,
   .game-container,
   .result-container {
@@ -969,34 +1018,7 @@ h1, h2, h3 {
   .landing-quote,
   .landing-descriptor {
     max-width: 100%;
+    text-align: left;
   }
-
-.book-hover-popup {
-  top: 100%;
-  margin-top: 2px;
-}
-
-
-
-.book-hover-container::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  height: 30px;  /* increase from 14px → 30px */
-  z-index: 199;
-}
-.book-hover-container:hover .book-hover-popup,
-.book-hover-popup:hover {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
-.book-hover-popup.active {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
 
 }
