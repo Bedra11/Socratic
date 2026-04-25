@@ -1,273 +1,449 @@
-# **MLOps — Socratic : The Ethical Reasoning Game**
+# Socratic — The Ethical Reasoning Game (MLOps Project)
+
+---
 
 ## 1. Présentation du projet
 
-**Socratic** est une application web interactive basée sur l'intelligence artificielle qui analyse le raisonnement humain à travers un jeu philosophique.
+**Socratic** est une application web interactive qui analyse le raisonnement humain à travers un jeu philosophique.
 
 L'utilisateur est confronté à **5 scénarios éthiques**, dans lesquels il doit :
-
-* Prendre une décision
-* Justifier son raisonnement
+- prendre une décision
+- choisir une justification
 
 Ces réponses sont ensuite analysées par deux modèles de Machine Learning afin de :
+- déterminer un **profil éthique dominant**
+- détecter des **biais logiques (fallacies)**
+- afficher la signification des concepts détectés (via Groq API)
+- recommander un **livre adapté**
 
-*  Déterminer son **profil éthique dominant**
-*  Détecter ses **schémas de biais logiques** (fallacies)
-*  Générer une **explication personnalisée** grâce à une IA (Groq)
-*  Recommander un **livre adapté** à son profil
+Ce projet combine :
+- NLP (Natural Language Processing)
+- classification supervisée
+- pipeline MLOps complet (DVC + MLflow + CI/CD + Docker + AWS)
 
-Ce projet combine **NLP (Natural Language Processing)**, **classification supervisée** et un pipeline **MLOps complet** (DVC + MLflow + CI/CD + Docker + AWS).
+---
 
+## 2. Architecture technique
 
+L'architecture a été conçue pour être simple, modulaire et reproductible.
 
-## 2. Architecture technique globale
+Elle sépare clairement :
+- l'inférence (API)
+- le tracking des modèles (MLflow)
+- le stockage des données (S3)
+- l'orchestration du pipeline (DVC)
 
-L'architecture repose sur une infrastructure **cloud-native et modulaire**.
+### Diagramme global
 
+```mermaid
+flowchart LR
 
+User[Utilisateur] --> Frontend[Frontend HTML/CSS/JS]
+Frontend --> API[FastAPI]
 
-```
-                        ┌─────────────────────────────────┐
-                        │           AWS Cloud             │
-                        │                                 │
-  User ──── Browser ───►│  EC2 (t3.medium, Ubuntu 22.04)  │
-                        │  ├── Docker: FastAPI :8000      │
-                        │  └── MLflow Server :5000        │
-                        │                                 │
-                        │  S3: group4-soc-bucket          │
-                        │  ├── data/raw/                  │
-                        │  ├── data/processed/            │
-                        │  ├── mlflow/  (artifacts)       │
-                        │  └── dvc-store/  (DVC cache)    │
-                        └─────────────────────────────────┘
-```
+API --> EthicsModel[Modèle Ethique]
+API --> FallacyModel[Detecteur de biais]
 
+EthicsModel --> Result[Resultat]
+FallacyModel --> Result
 
-### Composants principaux
+Result --> LLM[Groq API]
+LLM --> Explanation[Signification des concepts]
 
-| Composant | Rôle |
-|---|---|
-| **AWS EC2** | Hébergement du serveur MLflow + déploiement de l'API (Docker) |
-| **AWS S3** | Stockage des datasets (raw + processed) + artefacts MLflow (remote DVC) |
-| **MLflow** | Tracking des expériences + Registry des modèles (Staging / Production) |
-| **DVC** | Versionnage des données + pipeline reproductible |
-| **FastAPI** | API backend pour prédiction et interaction |
-| **Frontend (Jinja2 + JS)** | Interface du jeu + page de résultats |
-| **Groq API** | Génération d'explications intelligentes multilingues |
-| **Docker** | Conteneurisation de l'API |
-| **GitHub Actions** | CI/CD (déploiement + réentraînement) |
-
-### Pipeline MLOps (DVC)
-
-```
-preprocess → train → evaluate → register
+Result --> Book[Recommandation Livre]
+Explanation --> UI[Affichage]
+Book --> UI
 ```
 
-Chaque étape est **versionnée**, **reproductible** et **automatisée**.
+---
 
+## 3. Infrastructure Cloud
 
+```mermaid
+flowchart LR
 
-## 3. Modèles de Machine Learning
+User --> EC2
+
+subgraph AWS
+    EC2[EC2 Instance]
+    API[FastAPI Docker :8000]
+    MLflow[MLflow Server :5000]
+    S3[S3 Bucket]
+end
+
+EC2 --> API
+EC2 --> MLflow
+
+API --> S3
+MLflow --> S3
+```
+
+---
+
+## 4. Pipeline MLOps (DVC)
+
+Le pipeline est entièrement versionné et reproductible grâce à DVC.
+
+```mermaid
+flowchart LR
+
+Raw[data/raw] --> Preprocess[preprocess.py]
+Preprocess --> Processed[data/processed]
+
+Processed --> Train[train.py]
+Train --> Model[models/]
+
+Model --> Evaluate[evaluate.py]
+Evaluate --> Metrics[metrics.json]
+
+Metrics --> Register[register.py]
+Register --> MLflow[MLflow Registry]
+```
+
+---
+
+## 5. CI/CD
+
+Le projet utilise GitHub Actions pour automatiser le déploiement et le réentraînement.
+
+```mermaid
+flowchart LR
+
+Dev[Developer] --> GitHub[GitHub Repo]
+
+GitHub --> Deploy[deploy.yml]
+GitHub --> Retrain[retrain.yml]
+
+Deploy --> EC2[EC2 Server]
+EC2 --> API[FastAPI Docker]
+
+Retrain --> EC2
+EC2 --> DVC[dvc repro]
+DVC --> MLflow[New Model]
+
+MLflow --> API
+```
+
+---
+
+## 6. Modèles de Machine Learning
 
 ### Modèle 1 — Ethics Classifier
 
-* **Objectif** : Classifier le raisonnement en 5 théories éthiques
-* **Classes** : `utilitarianism`, `deontology`, `virtue ethics`, `care ethics`, `egoism`
-* **Algorithme** : Logistic Regression (multinomial, solver=saga)
-* **Features** : TF-IDF (word n-grams + char n-grams)
-* **Performance** : F1-score ≈ **0.84**
+| Propriété | Valeur |
+|-----------|--------|
+| Objectif | Classifier le raisonnement en théorie éthique |
+| Classes | utilitarianism, deontology, virtue ethics, care ethics, egoism |
+| Algorithme | Logistic Regression |
+| Features | TF-IDF |
+| F1-score | 0.82 |
 
 ### Modèle 2 — Fallacy Detector
 
-* **Objectif** : Détecter les erreurs de raisonnement
-* **Classes** : 13 types de biais logiques
-* **Algorithme** : LinearSVC ou Logistic Regression (via validation croisée)
-* **Particularité** : Dataset déséquilibré → utilisation de `class_weight=balanced`
-* **Performance** : F1-score ≈ **0.60**
+| Propriété | Valeur |
+|-----------|--------|
+| Objectif | Détecter les biais logiques |
+| Classes | 13 types |
+| Algorithme | Logistic Regression / LinearSVC |
+| Déséquilibre | `class_weight=balanced` |
+| F1-score | 0.61 |
 
+---
 
+## 7. Rôle de Groq API
 
-## 4. Données utilisées
+Groq est utilisé uniquement pour afficher la signification des concepts détectés.
 
-### Datasets
+Concrètement, il permet :
+- d'expliquer brièvement les théories éthiques
+- de définir les biais logiques identifiés
 
-| Fichier | Exemples | Description |
-|---|---|---|
-| `ethics_dataset.csv` | 305 (équilibré) | colonnes : `scenario`, `decision`, `reason`, `label` |
-| `fallacy_dataset.csv` | 2452 (déséquilibré) | classification multi-classes |
+Il ne réalise aucune prédiction et n'intervient pas dans les modèles de Machine Learning.
+
+---
+
+## 8. Données
+
+| Dataset | Description |
+|---------|-------------|
+| `ethics_dataset.csv` | Données équilibrées |
+| `fallacy_dataset.csv` | Données déséquilibrées |
 
 ### Prétraitement
 
-* Nettoyage texte (`clean_text`)
-* Fusion des champs (`scenario + decision + reason`)
-* Vectorisation TF-IDF
-* Encodage des labels
-* Split train/test (stratifié)
+- nettoyage texte
+- fusion des colonnes
+- TF-IDF
+- encodage labels
+- split train/test
 
+---
 
-
-## 5. Arborescence du projet
+## 9. Structure du projet
 
 ```plaintext
-project-root/
+Socratic/
 │
-├── src/                    # Pipeline ML
+├── .dvc/
+├── .github/workflows/
+│   ├── deploy.yml
+│   └── retrain.yml
+│
+├── api/
+│   └── main.py
+│
+├── src/
 │   ├── preprocess.py
 │   ├── train.py
 │   ├── evaluate.py
-│   ├── register.py
-│   └── utils.py
+│   └── register.py
 │
-├── api/                    # Backend FastAPI
-│   └── main.py
+├── scripts/
+│   ├── setup.sh
+│   └── setup.ps1
 │
-├── templates/              # Frontend (HTML)
+├── templates/
 │   ├── index.html
-│   ├── language.html
 │   ├── game.html
 │   └── result.html
 │
 ├── static/
 │   ├── css/style.css
-│   └── js/app.js
+│   └── js/
 │
-├── .github/workflows/      # CI/CD
-│   ├── deploy.yml
-│   └── retrain.yml
+├── data/
+├── models/
+├── metrics/
 │
-├── dvc.yaml                # Pipeline DVC
+├── dvc.yaml
+├── dvc.lock
+├── params.yaml
 ├── Dockerfile
 ├── requirements.txt
 └── README.md
 ```
 
+---
 
+## 10. Structure Git
 
-## 6. Instructions pour reproduire l'environnement et relancer le projet
+Le projet utilise une organisation en branches :
 
-### Prérequis
+- `main` : production
+- `staging` : intégration
+- `dev-XXXX` : développement individuel
 
-* Python 3.9+
-* Git
-* DVC
-* Docker (optionnel)
+Les merges vers `main` déclenchent le déploiement automatique.
 
+---
 
+## 11. Variables d'environnement
 
-### 6.1. Cloner le projet et installer les dépendances
+Les variables sensibles sont stockées dans GitHub Secrets et non dans le code :
+
+- `EC2_HOST`
+- `MLFLOW_TRACKING_URI`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `GROQ_API_KEY`
+
+Cela garantit la sécurité des credentials.
+
+---
+
+## 12. Installation et exécution
+
+### Cloner le projet
 
 ```bash
 git clone <repo_url>
-cd project-root
+cd Socratic
+```
+
+### Installer les dépendances
+
+```bash
 pip install -r requirements.txt
 ```
 
-
-
-### 6.2. Lancer le pipeline ML
+### Lancer le pipeline
 
 ```bash
 dvc pull
 dvc repro
 ```
 
-
-
-### 6.3. Lancer l'API localement
+### Lancer l'API
 
 ```bash
-uvicorn api.main:app --reload --port 8000
+uvicorn api.main:app --reload
 ```
 
- Accès : `http://localhost:8000`
+### Health check
 
+```bash
+curl http://localhost:8000/
+```
 
+Doit retourner un statut (ex: `{"status": "ok"}`).
 
-## 7. Déploiement sur AWS EC2 :
+### Tester l'API
 
-### 7.1. Lancer le serveur MLflow
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"input": "example"}'
+```
+
+L'API retourne une prédiction au format JSON.
+
+---
+
+## 13. Chargement du modèle
+
+L'API charge automatiquement le modèle depuis le MLflow Model Registry :
+
+```python
+mlflow.pyfunc.load_model("models:/socratic-model/latest")
+```
+
+Cela permet d'utiliser la dernière version validée du modèle sans modifier le code.
+
+---
+
+## 14. Déploiement
+
+### MLflow Tracking Server
+
+Le serveur MLflow est déployé sur une instance EC2 avec :
+- stockage local des métadonnées (SQLite)
+- stockage S3 pour les artefacts
 
 ```bash
 mlflow server \
   --host 0.0.0.0 \
   --port 5000 \
-  --backend-store-uri sqlite:///mlflow.db \
-  --default-artifact-root s3://<bucket>/mlflow
+  --backend-store-uri sqlite:////home/ubuntu/mlflow/mlflow.db \
+  --default-artifact-root s3://group4-soc-bucket/mlflow \
+  --allowed-hosts "EC2_IP:5000,EC2_IP,localhost:5000,localhost,127.0.0.1:5000,127.0.0.1" \
+  --cors-allowed-origins "http://EC2_IP:5000,http://localhost:5000"
 ```
 
-### 7.2. Lancer l'API avec Docker
+Rôle de MLflow :
+- tracking des expériences
+- comparaison des modèles
+- registry des modèles utilisés en production
+
+### Docker
 
 ```bash
 docker build -t socratic-api .
-docker run -d -p 8000:8000 socratic-api
+
+docker run -d --name socratic-api --restart always -p 8000:8000 \
+  -e MLFLOW_TRACKING_URI=$MLFLOW_TRACKING_URI \
+  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+  -e AWS_DEFAULT_REGION=eu-west-3 \
+  -e GROQ_API_KEY=$GROQ_API_KEY \
+  socratic-api
 ```
 
+### Accès aux services
 
+- API : `http://<EC2_IP>:8000`
+- MLflow : `http://<EC2_IP>:5000`
 
-## 8. CI/CD (GitHub Actions)
+---
 
-### `deploy.yml`
+## 15. Automatisation du setup
 
-Déploiement automatique sur EC2 à chaque push sur `main`.
+Des scripts ont été ajoutés pour simplifier l'exécution :
 
-### `retrain.yml`
+- `setup.sh` — Linux / EC2
+- `setup.ps1` — Windows
 
-Réentraînement automatique :
-* Déclenchement manuel ou planifié (cron)
-* Exécute `dvc repro`
+Ces scripts permettent de :
+- charger les variables d'environnement
+- installer les dépendances
+- créer les dossiers nécessaires
+- récupérer les données depuis DVC
 
+```bash
+bash scripts/setup.sh
+```
 
+Puis :
 
-## 9. Fonctionnement du jeu
+```bash
+dvc repro
+```
 
-1. **Page d'accueil** → Démarrer
-2. **Choix de langue**
-3. **5 scénarios** : choix d'une décision + choix d'un raisonnement
-4. **Analyse via API**
-5. **Résultat final** :
-   *  Profil éthique dominant
-   *  Biais logique détecté
-   *  Explication IA personnalisée
-   *  Insight personnel
-   *  Recommandation de livre
+---
 
+## 16. Fonctionnement du jeu
 
+```mermaid
+flowchart TD
 
-## 10. Bonnes pratiques MLOps appliquées
+Start[Accueil] --> Game[5 scenarios]
 
-*  Versionnage des données (DVC)
-*  Suivi des expériences (MLflow)
-*  Séparation des environnements
-*  Déploiement conteneurisé (Docker)
-*  Automatisation (CI/CD)
-*  Gestion des secrets (`.env`)
+Game --> Decision[Decision]
+Decision --> Reason[Raisonnement]
 
+Reason --> API[Analyse]
 
+API --> Ethics[Profil ethique]
+API --> Fallacy[Biais logique]
 
-## 11. Limitations actuelles
+Ethics --> Result[Resultat]
+Fallacy --> Result
 
-* Performance du modèle de fallacy encore faible (~0.60)
-* Dépendance à l'API Groq
-* Dataset limité pour certains biais rares
+Result --> LLM[Signification des concepts]
+Result --> Book[Livre recommande]
+```
 
+---
 
+## 17. Choix techniques
 
-## 12. Améliorations futures
+| Choix | Raison |
+|-------|--------|
+| Logistic Regression | Rapide et efficace sur petit dataset |
+| TF-IDF | Adapté au texte court |
+| DVC | Versionnage des données et du pipeline |
+| MLflow | Tracking et registry des modèles |
+| SQLite | Backend léger pour les métadonnées MLflow |
+| S3 | Stockage séparé pour les artefacts lourds |
+| AWS EC2 | Solution simple et suffisante |
 
-*  Amélioration des performances modèles
-*  Ajout de modèles deep learning (Transformers)
-*  Support multilingue natif (sans traduction)
-*  Dashboard d'analyse utilisateur
-*  Pipeline CI/CD complet avec tests automatiques
+---
 
+## 18. Limitations
 
+- modèle fallacy encore limité (F1 ≈ 0.60)
+- dépendance à Groq API (externe)
+- dataset restreint
 
-## 13. Conclusion
+---
 
-**Socratic** illustre une implémentation complète d'un système MLOps moderne, combinant :
+## 19. Améliorations futures
 
-* Intelligence artificielle
-* Infrastructure cloud
-* Automatisation
-* Expérience utilisateur interactive
+Plusieurs pistes d'amélioration ont été identifiées :
 
+- amélioration du modèle de détection de fallacies (Deep Learning type BERT)
+- support multilingue natif
+- amélioration de l'expérience utilisateur
+
+### DevOps / MLOps
+
+- ajout d'une GitHub Merge Queue pour sécuriser les merges
+- amélioration du pipeline CI/CD (validation plus stricte)
+- amélioration du déclenchement du retraining
+
+---
+
+## 20. Conclusion
+
+Ce projet met en pratique les concepts MLOps en construisant un pipeline complet, de la donnée brute jusqu'au déploiement d'une API.
+
+L'approche reste simple mais reproductible, ce qui constitue une base solide pour des systèmes plus avancés.
