@@ -17,15 +17,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host:     ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key:      ${{ secrets.EC2_SSH_KEY }}
-          port:     22
-          timeout:  60s
-          script: |
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
             cd /home/ubuntu/Socratic
             git pull origin main
             docker stop socratic-api || true
@@ -35,15 +36,16 @@ jobs:
               --name socratic-api \
               --restart always \
               -p 8000:8000 \
-              -e MLFLOW_TRACKING_URI="${{ secrets.MLFLOW_TRACKING_URI }}" \
-              -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
-              -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+              -e MLFLOW_TRACKING_URI="${MLFLOW_TRACKING_URI}" \
+              -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
+              -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
               -e AWS_DEFAULT_REGION="eu-west-3" \
               -e MODEL_NAME_ETHICS="socratic-ethics-classifier" \
               -e MODEL_NAME_FALLACY="socratic-fallacy-classifier" \
-              -e GROQ_API_KEY="${{ secrets.GROQ_API_KEY }}" \
+              -e GROQ_API_KEY="${GROQ_API_KEY}" \
               socratic-api
             echo "Container started"
+          EOF
 
       - name: Health Check
         run: |
