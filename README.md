@@ -323,11 +323,10 @@ Le serveur MLflow est déployé sur une instance EC2 avec :
 mlflow server \
   --host 0.0.0.0 \
   --port 5000 \
-  --backend-store-uri sqlite:///mlflow.db \
-  --default-artifact-root s3://group4-soc-bucket \
-  --serve-artifacts \
-  --allowed-hosts "*" \
-  --cors-allowed-origins "*"
+  --backend-store-uri sqlite:////home/ubuntu/mlflow/mlflow.db \
+  --default-artifact-root s3://group4-soc-bucket/mlflow \
+  --allowed-hosts "EC2_IP:5000,EC2_IP,localhost:5000,localhost,127.0.0.1:5000,127.0.0.1" \
+  --cors-allowed-origins "http://EC2_IP:5000,http://localhost:5000"
 ```
 
 Rôle de MLflow :
