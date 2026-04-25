@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -24,18 +27,10 @@ jobs:
           timeout:  60s
           script: |
             cd /home/ubuntu/Socratic
-
-            # pull latest code
             git pull origin main
-
-            # stop and remove old container
             docker stop socratic-api || true
             docker rm   socratic-api || true
-
-            # build new image
             docker build -t socratic-api .
-
-            # run new container
             docker run -d \
               --name socratic-api \
               --restart always \
@@ -48,7 +43,6 @@ jobs:
               -e MODEL_NAME_FALLACY="socratic-fallacy-classifier" \
               -e GROQ_API_KEY="${{ secrets.GROQ_API_KEY }}" \
               socratic-api
-
             echo "Container started"
 
       - name: Health Check
