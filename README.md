@@ -136,7 +136,7 @@ MLflow --> API
 | Classes | utilitarianism, deontology, virtue ethics, care ethics, egoism |
 | Algorithme | Logistic Regression |
 | Features | TF-IDF |
-| F1-score | 0.84 |
+| F1-score | 0.82 |
 
 ### Modèle 2 — Fallacy Detector
 
@@ -146,7 +146,7 @@ MLflow --> API
 | Classes | 13 types |
 | Algorithme | Logistic Regression / LinearSVC |
 | Déséquilibre | `class_weight=balanced` |
-| F1-score | 0.60 |
+| F1-score | 0.61 |
 
 ---
 
