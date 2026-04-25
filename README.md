@@ -183,7 +183,7 @@ uvicorn api.main:app --reload --port 8000
 
 
 
-## 7. Déploiement sur AWS EC2
+## 7. Déploiement sur AWS EC2 :
 
 ### 7.1. Lancer le serveur MLflow
 
