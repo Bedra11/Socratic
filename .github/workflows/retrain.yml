@@ -1,10 +1,12 @@
-# .github/workflows/retrain.yml
 name: Retrain Models
 
 on:
   workflow_dispatch:
   schedule:
     - cron: '0 2 * * 1'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   retrain:
@@ -24,20 +26,12 @@ jobs:
           timeout:  300s
           script: |
             cd /home/ubuntu/Socratic
-
-            # load env
             source /home/ubuntu/Socratic/.env
-
-            # pull latest code
             git pull origin main
-
-            # run full pipeline
             source /home/ubuntu/venv/bin/activate
             dvc pull
             dvc repro
             dvc push
-
-            # restart API with new model (Docker)
             docker stop socratic-api || true
             docker rm   socratic-api || true
             docker build -t socratic-api .
@@ -51,7 +45,6 @@ jobs:
               -e AWS_DEFAULT_REGION="eu-west-3" \
               -e GROQ_API_KEY="$GROQ_API_KEY" \
               socratic-api
-
             echo "Retrain complete and API restarted"
 
       - name: Health Check
