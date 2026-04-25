@@ -70,12 +70,12 @@ stages:
     outs:
     - path: models/ethics_model.pkl
       hash: md5
-      md5: 414b12a6db851e234874ec714106a082
-      size: 91559
+      md5: be7371f987332dbd7531e2942577c5fe
+      size: 91540
     - path: models/fallacy_model.pkl
       hash: md5
-      md5: e46bd23f27e777d885e3747f33460100
-      size: 1818206
+      md5: 3e7ab871ba9ecafa67ed0ad78fad13cc
+      size: 1818187
   evaluate:
     cmd: python src/evaluate.py
     deps:
@@ -89,12 +89,12 @@ stages:
       size: 73910
     - path: models/ethics_model.pkl
       hash: md5
-      md5: 414b12a6db851e234874ec714106a082
-      size: 91559
+      md5: be7371f987332dbd7531e2942577c5fe
+      size: 91540
     - path: models/fallacy_model.pkl
       hash: md5
-      md5: e46bd23f27e777d885e3747f33460100
-      size: 1818206
+      md5: 3e7ab871ba9ecafa67ed0ad78fad13cc
+      size: 1818187
     - path: params.yaml
       hash: md5
       md5: fb9ad76cf00344a7d92075d3e98b24a2
@@ -117,12 +117,12 @@ stages:
       size: 248
     - path: models/ethics_model.pkl
       hash: md5
-      md5: 414b12a6db851e234874ec714106a082
-      size: 91559
+      md5: be7371f987332dbd7531e2942577c5fe
+      size: 91540
     - path: models/fallacy_model.pkl
       hash: md5
-      md5: e46bd23f27e777d885e3747f33460100
-      size: 1818206
+      md5: 3e7ab871ba9ecafa67ed0ad78fad13cc
+      size: 1818187
     - path: src/register.py
       hash: md5
       md5: 71173b9088d8274605be43c84dd1edc1
