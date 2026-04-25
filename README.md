@@ -386,8 +386,7 @@ dvc repro
 ```mermaid
 flowchart TD
 
-Start[Accueil] --> Langue[Choix langue]
-Langue --> Game[5 scenarios]
+Start[Accueil] --> Game[5 scenarios]
 
 Game --> Decision[Decision]
 Decision --> Reason[Raisonnement]
