@@ -1,3 +1,4 @@
+# .github/workflows/retrain.yml
 name: Retrain Models
 
 on:
@@ -16,15 +17,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
       - name: Retrain on EC2
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host:     ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key:      ${{ secrets.EC2_SSH_KEY }}
-          port:     22
-          timeout:  300s
-          script: |
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
             cd /home/ubuntu/Socratic
             source /home/ubuntu/Socratic/.env
             git pull origin main
@@ -46,6 +48,7 @@ jobs:
               -e GROQ_API_KEY="$GROQ_API_KEY" \
               socratic-api
             echo "Retrain complete and API restarted"
+          EOF
 
       - name: Health Check
         run: |
