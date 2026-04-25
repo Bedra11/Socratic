@@ -24,15 +24,20 @@ jobs:
           timeout:  300s
           script: |
             cd /home/ubuntu/Socratic
-            source /home/ubuntu/Socratic/.env
-            source /home/ubuntu/venv/bin/activate
 
+            # load env
+            source /home/ubuntu/Socratic/.env
+
+            # pull latest code
             git pull origin main
+
+            # run full pipeline
+            source /home/ubuntu/venv/bin/activate
             dvc pull
             dvc repro
             dvc push
 
-            # restart container with new models
+            # restart API with new model (Docker)
             docker stop socratic-api || true
             docker rm   socratic-api || true
             docker build -t socratic-api .
@@ -47,7 +52,7 @@ jobs:
               -e GROQ_API_KEY="$GROQ_API_KEY" \
               socratic-api
 
-            echo "Retrain complete"
+            echo "Retrain complete and API restarted"
 
       - name: Health Check
         run: |
