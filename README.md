@@ -1,4 +1,4 @@
-# Socratic — The Ethical Reasoning Game (MLOps Project) :)))
+# Socratic — The Ethical Reasoning Game (MLOps Project) 
 
 ---
 
